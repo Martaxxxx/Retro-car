@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import "rc-slider/assets/index.css";
-import { projectMap } from "./projectData";
+import Slider from "rc-slider";
+import axios from "axios";
+import { projectMap } from "../pages/projectData";
 import { useNavigate } from "react-router-dom";
 import Select from "react-select";
 import { useProjectContext } from "../components/context/ProjectContext";
-import Slider from "rc-slider";
 
-const Range = Slider.Range;
+interface Project {
+    id: string;
+    name: string;
+    brand: string;
+    year: number;
+    status: string;
+    endDate: string;
+    image?: string;
+}
 
 const sortOptions = [
     { value: "updated-newest", label: "Sortuj od najnowszych" },
@@ -15,28 +24,28 @@ const sortOptions = [
     { value: "name-asc", label: "Sortuj po nazwie (A-Z)" },
     { value: "name-desc", label: "Sortuj po nazwie (Z-A)" },
     { value: "year-asc", label: "Sortuj po roczniku rosnąco" },
-    { value: "year-desc", label: "Sortuj po roczniku malejąco" },
+    { value: "year-desc", label: "Sortuj po roczniku malejąco" }
 ];
 
 const statusOptions = [
     { value: "Utworzony", label: "Utworzony" },
     { value: "W toku", label: "W toku" },
-    { value: "Gotowy", label: "Gotowy" },
+    { value: "Gotowy", label: "Gotowy" }
 ];
 
 const customSelectStyles = {
-    control: (base: any) => ({
+    control: (base) => ({
         ...base,
-        backgroundColor: '#fff',
-        borderColor: '#9C2F3B',
-        boxShadow: 'none',
-        '&:hover': { borderColor: '#9C2F3B' }
+        backgroundColor: "#fff",
+        borderColor: "#9C2F3B",
+        boxShadow: "none",
+        "&:hover": { borderColor: "#9C2F3B" }
     }),
-    option: (base: any, state: any) => ({
+    option: (base, state) => ({
         ...base,
-        backgroundColor: state.isFocused ? '#9C2F3B' : '#fff',
-        color: state.isFocused ? '#fff' : '#000',
-        cursor: 'pointer'
+        backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
+        color: state.isFocused ? "#fff" : "#000",
+        cursor: "pointer"
     })
 };
 
@@ -44,11 +53,19 @@ const Renovations: React.FC = () => {
     const { projects: dynamicProjects } = useProjectContext();
     const navigate = useNavigate();
 
-    const allProjects = [
-        ...Object.values(projectMap),
-        ...dynamicProjects.filter(dp => !projectMap[dp.id])
-    ];
 
+    const [apiProjects, setApiProjects] = useState([]);
+
+    useEffect(() => {
+        axios.get("/api/renovations")
+            .then(response => setApiProjects(response.data))
+            .catch(error => console.error("Błąd pobierania danych z API:", error));
+    }, []);
+
+    const allProjects: Project[] = [
+        ...Object.values(projectMap),
+        ...dynamicProjects.filter((dp) => !projectMap[dp.id])
+    ];
     const allBrands = Array.from(new Set(allProjects.map(p => p.brand)));
     const brandOptions = allBrands.map(brand => ({ value: brand, label: brand }));
 
@@ -108,7 +125,7 @@ const Renovations: React.FC = () => {
                                     className="form-control"
                                     placeholder="Szukaj po nazwie..."
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onChange={e => setSearchTerm(e.target.value)}
                                 />
                             </div>
                             <div className="col-md-2">
@@ -117,7 +134,8 @@ const Renovations: React.FC = () => {
                                     styles={customSelectStyles}
                                     options={statusOptions}
                                     value={statusOptions.find(opt => opt.value === statusFilter)}
-                                    onChange={(option) => setStatusFilter(option?.value || "")}
+                                    onChange={option => setStatusFilter(option?.value || "")}
+                                    placeholder="Wybierz..."
                                 />
                             </div>
                             <div className="col-md-2">
@@ -126,7 +144,8 @@ const Renovations: React.FC = () => {
                                     styles={customSelectStyles}
                                     options={brandOptions}
                                     value={brandOptions.find(opt => opt.value === brandFilter)}
-                                    onChange={(option) => setBrandFilter(option?.value || "")}
+                                    onChange={option => setBrandFilter(option?.value || "")}
+                                    placeholder="Wybierz..."
                                 />
                             </div>
                             <div className="col-md-3 ms-auto">
@@ -135,27 +154,53 @@ const Renovations: React.FC = () => {
                                     styles={customSelectStyles}
                                     options={sortOptions}
                                     value={sortOptions.find(opt => opt.value === sortBy)}
-                                    onChange={(option) => setSortBy(option?.value || "")}
+                                    onChange={option => setSortBy(option?.value || "")}
+                                    placeholder="Sortuj..."
                                 />
                             </div>
                         </div>
 
                         <div className="row g-3 mt-4">
                             <div className="col-md-6">
-                                <label className="form-label">Rocznik</label>
-                                <Range
-                                    allowCross={false}
-                                    min={initialYearMin}
-                                    max={initialYearMax}
-                                    value={[yearMin, yearMax]}
-                                    onChange={([min, max]) => {
-                                        setYearMin(min);
-                                        setYearMax(max);
-                                    }}
-                                />
-                                <div className="d-flex justify-content-between mt-2">
-                                    <input type="number" value={yearMin} onChange={e => setYearMin(Number(e.target.value))} />
-                                    <input type="number" value={yearMax} onChange={e => setYearMax(Number(e.target.value))} />
+                                <div className="card p-3">
+                                    <label className="form-label">Rocznik</label>
+                                    <Slider
+                                        range
+                                        allowCross={false}
+                                        min={initialYearMin}
+                                        max={initialYearMax}
+                                        value={[yearMin, yearMax]}
+                                        onChange={(value) => {
+                                            if (Array.isArray(value)) {
+                                                setYearMin(value[0]);
+                                                setYearMax(value[1]);
+                                            }
+                                        }}
+                                        trackStyle={[{ backgroundColor: "#9C2F3B", height: 6 }]}
+                                        handleStyle={[
+                                            { backgroundColor: "#9C2F3B", borderColor: "#9C2F3B" },
+                                            { backgroundColor: "#9C2F3B", borderColor: "#9C2F3B" }
+                                        ]}
+                                        railStyle={{ backgroundColor: "#ccc", height: 6 }}
+                                    />
+                                    <div className="d-flex justify-content-between mt-3 gap-3">
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={yearMin}
+                                            min={1885}
+                                            max={currentYear}
+                                            onChange={e => setYearMin(Number(e.target.value))}
+                                        />
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={yearMax}
+                                            min={1885}
+                                            max={currentYear}
+                                            onChange={e => setYearMax(Number(e.target.value))}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="col-md-6 d-flex justify-content-end align-items-end">
@@ -164,7 +209,7 @@ const Renovations: React.FC = () => {
                                         className="form-check-input"
                                         type="checkbox"
                                         checked={onlyMine}
-                                        onChange={(e) => setOnlyMine(e.target.checked)}
+                                        onChange={e => setOnlyMine(e.target.checked)}
                                         id="onlyMine"
                                     />
                                     <label className="form-check-label ms-2" htmlFor="onlyMine">
@@ -179,17 +224,39 @@ const Renovations: React.FC = () => {
                 <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
                     {filteredProjects.slice(0, visibleCount).map((project, index) => (
                         <div className="col" key={index}>
-                            <div className="card h-100 shadow" onClick={() => navigate(`/projectdetails/${project.id}`)} style={{ cursor: "pointer" }}>
+                            <div
+                                className="card h-100 shadow"
+                                onClick={() => navigate(`/projectdetails/${project.id}`)}
+                                style={{ cursor: "pointer" }}
+                            >
                                 {project.image && (
-                                    <img src={project.image} alt={project.name} className="card-img-top" />
+                                    <img
+                                        src={project.image}
+                                        alt={project.name}
+                                        className="card-img-top"
+                                        style={{ height: "180px", objectFit: "cover" }}
+                                    />
                                 )}
                                 <div className="card-body text-center">
                                     <h5 className="card-title">{project.name}</h5>
                                     <p className="card-text">
-                                        Rok: {project.year}<br />
-                                        Marka: {project.brand}<br />
+                                        Rok: {project.year}
+                                        <br />
+                                        Marka: {project.brand}
+                                        <br />
                                         Status: {project.status}
                                     </p>
+                                    <div className="progress">
+                                        <div
+                                            className="progress-bar"
+                                            role="progressbar"
+                                            style={{ width: `70%`, backgroundColor: "#9C2F3B" }}
+                                            aria-valuemin={0}
+                                            aria-valuemax={100}
+                                        >
+                                            70%
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -198,7 +265,9 @@ const Renovations: React.FC = () => {
 
                 {visibleCount < filteredProjects.length && (
                     <div className="mt-4 text-center">
-                        <button className="btn btn-outline-secondary" onClick={handleLoadMore}>Załaduj więcej</button>
+                        <button className="btn btn-outline-secondary" onClick={handleLoadMore}>
+                            Załaduj więcej
+                        </button>
                     </div>
                 )}
 

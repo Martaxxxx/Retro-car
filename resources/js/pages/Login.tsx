@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-// Jeśli chcesz zostawić kontekst użytkownika, może być aktywny:
+import axios from "axios";
 import { useUser } from "../components/context/UserContext";
 
 export default function Login() {
     const navigate = useNavigate();
-    const { fetchUser } = useUser(); // zostawiamy, jeśli potrzebne
+    const { fetchUser } = useUser(); // zostaw, jeśli masz kontekst
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -16,17 +16,21 @@ export default function Login() {
         setLoading(true);
 
         try {
-            // 🔧 Tymczasowa symulacja logowania
-            console.log("🔐 Email:", email);
-            console.log("🔐 Hasło:", password);
+            const response = await axios.post("http://localhost/api/login", {
+                email,
+                password,
+            }, {
+                withCredentials: true, // ważne przy sesji
+            });
 
-            // Tu możesz dodać lokalne przechowywanie danych testowych
-            localStorage.setItem("accessToken", "FAKE_TOKEN");
-            await fetchUser(); // Jeśli nie działa, zakomentuj
+            console.log("✅ Zalogowano:", response.data);
 
+            localStorage.setItem("accessToken", "FAKE_TOKEN"); // jeśli masz token, zapisz go tutaj
+            await fetchUser?.(); // opcjonalnie: odśwież info o użytkowniku
             navigate("/", { replace: true });
-        } catch (err) {
-            alert("Coś poszło nie tak przy logowaniu.");
+        } catch (err: any) {
+            console.error("❌ Błąd logowania", err.response?.data || err);
+            alert("Błędne dane logowania");
         } finally {
             setLoading(false);
         }

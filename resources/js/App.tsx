@@ -10,6 +10,7 @@ import ShoppingList from "./pages/ShoppingList";
 import UserSettings from "./pages/UserSettings";
 import ManagerPanel from "./pages/ManagerPanel";
 import Reports from "./pages/Reports";
+import Register from "./pages/Register";
 
 const App: React.FC = () => {
     return (
@@ -23,8 +24,10 @@ const App: React.FC = () => {
             <Route path="/ustawienia" element={<UserSettings />} />
             <Route path="/zarządzanie" element={<ManagerPanel />} />
             <Route path="/raporty" element={<Reports />} />
+            <Route path="/rejestracja" element={<Register />} />
         </Routes>
     );
 };
 
 export default App;
+
