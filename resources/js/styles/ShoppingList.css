@@ -1,0 +1,162 @@
+/* ----------------- Nagłówek ----------------- */
+.container h2 {
+    margin-bottom: 18px;
+    font-size: 40px;
+    font-weight: bold;
+}
+
+/* ----------------- Sekcja Podsumowania ----------------- */
+.shopping-summary {
+    display: flex;
+    position: relative;
+    justify-content: space-between;
+    align-items: flex-start;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-height: 180px;
+    gap: 20px;
+}
+
+.summary-text {
+    flex: 1;
+    padding-right: 160px; /* Rezerwuje miejsce na obrazek */
+}
+
+/* Obrazek absolutnie ustawiony w prawym górnym rogu */
+.summary-image-absolute {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 90%;
+    width: 600px;
+    max-width: 350px;
+    z-index: 1;
+}
+
+    .summary-image-absolute img {
+        height: 100%;
+        width: auto;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+/* ----------------- Tabela zakupów ----------------- */
+.shopping-table thead th {
+    background-color: #9C2F3B;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 14px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.6;
+}
+/* Usuwamy podwójne obramowania wewnątrz tabeli */
+.shopping-table tr td {
+    border-top: none;
+    border-left: none;
+}
+.shopping-table-wrapper {
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 12px;
+}
+    .shopping-table tr td:last-child {
+        border-right: none;
+    }
+    /* Zaokrąglenie rogów nagłówka */
+    .shopping-table thead th:first-child {
+        border-top-left-radius: 12px;
+    }
+
+    .shopping-table thead th:last-child {
+        border-top-right-radius: 12px;
+    }
+.shopping-table {
+    border-collapse: separate; /* WYMAGANE dla zaokrągleń */
+    border-radius: 12px; /* Zaokrąglenie całej tabeli */
+    overflow: hidden; /* Przycina zawartość do zaokrąglonych rogów */
+}
+.shopping-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* ----------------- Przycisk toggle podsumowania ----------------- */
+.summary-toggle {
+    background-color: #9C2F3B;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+    .summary-toggle:hover {
+        background-color: #7d202a;
+    }
+
+/* ----------------- Przycisk Dodaj część ----------------- */
+.add-item-button {
+    background-color: #9C2F3B;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-weight: normal;
+}
+
+    .add-item-button:hover {
+        background-color: #7d202a;
+    }
+
+/* ----------------- Minimalistyczny czarny przycisk usuń ----------------- */
+.icon-remove-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+}
+
+    .icon-remove-btn svg {
+        fill: black;
+        transition: opacity 0.2s;
+    }
+
+    .icon-remove-btn:hover svg {
+        opacity: 0.6;
+    }
+
+/* ----------------- Lista załączników ----------------- */
+.attachment-list-edit {
+    max-height: 72px;
+    overflow-y: auto;
+    font-size: 13px;
+    margin: 4px 0;
+    padding-left: 16px;
+}
+
+    .attachment-list-edit li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+
+/* ----------------- Link załącznika ----------------- */
+.shopping-attachment-link {
+    color: #9C2F3B;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+    .shopping-attachment-link:hover {
+        text-decoration: underline;
+    }
