@@ -28,8 +28,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const formattedUser: User = {
                 name: userData.name,
                 email: userData.email,
-                avatar: "/default-avatar.png",
-                roles: [userData.role || "user"],
+                avatar: userData.avatar || "/default-avatar.png",
+                roles: userData.roles || ["user"], // ✅ poprawka tutaj
             };
 
             setUser(formattedUser);
