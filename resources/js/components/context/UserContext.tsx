@@ -1,9 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import axios from "../../axios"; // ← musisz mieć poprawnie skonfigurowany axios
 
 interface User {
     name: string;
-    avatar: string;
-    roles: string[];
+    avatar?: string;
+    roles?: string[];
     email: string;
 }
 
@@ -20,16 +21,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
 
     const fetchUser = async () => {
-        // 🔧 MOCK DLA DEVELOPMENTU BEZ BACKENDU
-        console.log("🔄 Fetching mock user...");
-        const mockUser: User = {
-            name: "Janek",
-            avatar: "/default-avatar.png",
-            roles: ["user"],
-            email: "janek@example.com"
-        };
-        setUser(mockUser);
-        console.log("✅ Mock user ustawiony:", mockUser);
+        try {
+            const response = await axios.get("/api/user");
+            const userData = response.data;
+
+            const formattedUser: User = {
+                name: userData.name,
+                email: userData.email,
+                avatar: userData.avatar || "/default-avatar.png",
+                roles: userData.roles || ["user"], // ✅ poprawka tutaj
+            };
+
+            setUser(formattedUser);
+        } catch (error) {
+            console.error("❌ Błąd pobierania użytkownika:", error);
+            setUser(null);
+        }
     };
 
     const logout = () => {

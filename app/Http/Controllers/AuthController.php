@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -11,8 +12,9 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
-            $request->session()->regenerate(); 
+            $request->session()->regenerate();
             $user = Auth::user();
+
             return response()->json([
                 'message' => 'Zalogowano pomyślnie',
                 'user' => $user,

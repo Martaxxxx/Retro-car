@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import axios from "axios";
+import axios from "../axios";
 import { useUser } from "../components/context/UserContext";
 
 export default function Login() {
     const navigate = useNavigate();
-    const { fetchUser } = useUser(); // zostaw, jeśli masz kontekst
+    const { fetchUser } = useUser();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -16,20 +16,12 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const response = await axios.post("http://localhost/api/login", {
-                email,
-                password,
-            }, {
-                withCredentials: true, // ważne przy sesji
-            });
+            await axios.post("/api/login", { email, password });
 
-            console.log("✅ Zalogowano:", response.data);
-
-            localStorage.setItem("accessToken", "FAKE_TOKEN"); // jeśli masz token, zapisz go tutaj
-            await fetchUser?.(); // opcjonalnie: odśwież info o użytkowniku
+            localStorage.setItem("accessToken", "FAKE_TOKEN");
+            await fetchUser?.();
             navigate("/", { replace: true });
-        } catch (err: any) {
-            console.error("❌ Błąd logowania", err.response?.data || err);
+        } catch {
             alert("Błędne dane logowania");
         } finally {
             setLoading(false);
@@ -37,8 +29,7 @@ export default function Login() {
     };
 
     return (
-        <div
-            className="d-flex flex-column align-items-center min-vh-100 p-4"
+        <div className="d-flex flex-column align-items-center min-vh-100 p-4"
             style={{
                 backgroundImage: "url('/4.png')",
                 backgroundSize: "cover",
@@ -47,8 +38,7 @@ export default function Login() {
                 backgroundColor: "#fff",
             }}
         >
-            <div
-                className="d-flex flex-column justify-content-between position-relative w-100 p-5"
+            <div className="d-flex flex-column justify-content-between position-relative w-100 p-5"
                 style={{
                     maxWidth: "500px",
                     minHeight: "550px",
