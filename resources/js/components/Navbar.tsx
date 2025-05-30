@@ -5,9 +5,7 @@ import { NavLink as RouterLink, useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
 import { useUser } from "../components/context/UserContext";
 
-
 // ====== Styled Components ======
-
 
 const NavbarContainer = styled.div`
   width: 100%;
@@ -230,86 +228,84 @@ const DropdownItem = styled.div`
 // ====== Navbar Component ======
 
 export const Navbar = () => {
-    const navigate = useNavigate();
-    const [isOpen, setIsOpen] = useState(false);
-    const [showDropdown, setShowDropdown] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement | null>(null);
-    const { user, logout } = useUser();
-    console.log("👤 user z kontekstu:", user);
+  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const { user, logout } = useUser();
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setShowDropdown(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    return (
-        <NavbarContainer>
-            <Logo src="/retro2.png" alt="Logo" />
+  return (
+    <NavbarContainer>
+      <Logo src="/retro2.png" alt="Logo" />
 
-            <Hamburger onClick={() => setIsOpen(!isOpen)}>
-                <Menu size={24} />
-            </Hamburger>
+      <Hamburger onClick={() => setIsOpen(!isOpen)}>
+        <Menu size={24} />
+      </Hamburger>
 
-            <NavLinks isOpen={isOpen}>
-                <StyledRouterLink to="/" end onClick={() => setIsOpen(false)}>Strona główna</StyledRouterLink>
-                <StyledRouterLink to="/renowacje" onClick={() => setIsOpen(false)}>Renowacje</StyledRouterLink>
-                <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
-                {user?.roles.includes("Admin") && (
-                    <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
-                )}
+      <NavLinks isOpen={isOpen}>
+        <StyledRouterLink to="/" end onClick={() => setIsOpen(false)}>Strona główna</StyledRouterLink>
+        <StyledRouterLink to="/renowacje" onClick={() => setIsOpen(false)}>Renowacje</StyledRouterLink>
+        <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
+        {user?.roles?.includes("admin") && (
+          <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
+        )}
+      </NavLinks>
 
-            </NavLinks>
+      <SearchInputWrapper>
+        <Search size={18} color="white" />
+        <SearchField placeholder="Szukaj..." />
+      </SearchInputWrapper>
 
-            <SearchInputWrapper>
-                <Search size={18} color="white" />
-                <SearchField placeholder="Szukaj..." />
-            </SearchInputWrapper>
+      <IconsContainer>
+        <IconWrapper><NotificationBell /></IconWrapper>
+        <IconWrapper onClick={() => navigate("/ustawienia")}><Settings size={26} /></IconWrapper>
+      </IconsContainer>
 
-            <IconsContainer>
-                <IconWrapper><NotificationBell /></IconWrapper>
-                <IconWrapper onClick={() => navigate("/ustawienia")}><Settings size={26} /></IconWrapper>
-            </IconsContainer>
-
-            {user ? (
-                <div style={{ position: "relative" }} ref={dropdownRef}>
-                    <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
-                        <img src={user.avatar || "/default-avatar.png"} alt="avatar" />
-                        Witaj, {user.name}
-                    </UserGreeting>
-                    {showDropdown && (
-                        <DropdownMenu>
-                            <DropdownItem
-                                onClick={logout}
-                                style={{
-                                    border: "2px solid #9C2F3B",
-                                    color: "#9C2F3B",
-                                    backgroundColor: "white",
-                                    borderRadius: "24px",
-                                    padding: "8px 14px",
-                                    fontWeight: "bold",
-                                    display: "flex",
-                                    gap: "14px",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                <LogOut size={18} /> Wyloguj
-                            </DropdownItem>
-                        </DropdownMenu>
-                    )}
-                </div>
-            ) : (
-                <LoginButton onClick={() => navigate("/login")}>
-                    <User size={18} />
-                    Zaloguj się
-                </LoginButton>
-            )}
-        </NavbarContainer>
-    );
+      {user ? (
+        <div style={{ position: "relative" }} ref={dropdownRef}>
+          <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
+            <img src={user.avatar || "/default-avatar.png"} alt="avatar" />
+            Witaj, {user.name}
+          </UserGreeting>
+          {showDropdown && (
+            <DropdownMenu>
+              <DropdownItem
+                onClick={logout}
+                style={{
+                  border: "2px solid #9C2F3B",
+                  color: "#9C2F3B",
+                  backgroundColor: "white",
+                  borderRadius: "24px",
+                  padding: "8px 14px",
+                  fontWeight: "bold",
+                  display: "flex",
+                  gap: "14px",
+                  cursor: "pointer",
+                }}
+              >
+                <LogOut size={18} /> Wyloguj
+              </DropdownItem>
+            </DropdownMenu>
+          )}
+        </div>
+      ) : (
+        <LoginButton onClick={() => navigate("/login")}>
+          <User size={18} />
+          Zaloguj się
+        </LoginButton>
+      )}
+    </NavbarContainer>
+  );
 };
 
 export default Navbar;
