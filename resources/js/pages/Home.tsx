@@ -37,7 +37,7 @@ const Home: React.FC = () => {
                     boxShadow: "none",
                 }}
             >
-                <ProjectSlider projects={projects} />
+                <ProjectSlider />
             </div>
         </>
     );

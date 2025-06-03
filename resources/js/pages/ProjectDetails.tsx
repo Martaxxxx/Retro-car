@@ -14,6 +14,9 @@ import { ProjectData } from "../pages/projectData";
 import { Link } from "react-router-dom";
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { generateProjectDetails } from "../utils/generateProjectDetails";
+import axios from "../axios";
+
+
 interface FileData {
     name: string;
     size: number;
@@ -21,13 +24,12 @@ interface FileData {
     file: File;
 }
 
-
-
 registerLocale("pl", pl);
 const PartsTable = lazy(() => import("../components/PartsTable"));
 const FileExplorerModal = lazy(() => import("../components/FileExplorerModal"));
+
 const ProjectDetails: React.FC = () => {
-    const { projectId } = useParams<{ projectId: string }>();
+    const { projectName } = useParams<{ projectName: string }>();
     const { projects } = useProjectContext();
 
     const [project, setProject] = useState<ProjectData | null>(null);
@@ -41,15 +43,22 @@ const ProjectDetails: React.FC = () => {
     const [newName, setNewName] = useState("");
 
     useEffect(() => {
-        if (projectId) {
-            const selected = projects.find(p => p.id === projectId);
-            if (selected) {
-                setProject(selected);
-                setSelectedStartDate(new Date(selected.startDate));
-                setSelectedEndDate(new Date(selected.endDate));
+        const fetchProject = async () => {
+            try {
+                const res = await axios.get(`/projectdetails/${projectName}`);
+                setProject(res.data);
+                setSelectedStartDate(new Date(res.data.start_date));
+                setSelectedEndDate(new Date(res.data.end_date));
+            } catch (error) {
+                console.error("❌ Błąd ładowania projektu:", error);
             }
+        };
+
+        if (projectName) {
+            fetchProject();
         }
-    }, [projectId, projects]);
+    }, [projectName]);
+
 
     useEffect(() => {
         if (project) {
@@ -68,7 +77,7 @@ const ProjectDetails: React.FC = () => {
             return () => clearInterval(timer);
         }
     }, [project]);
-    //Moje pliki
+
     const [files, setFiles] = useState<FileData[]>([]);
     const [showFileModal, setShowFileModal] = useState(false);
 
@@ -121,20 +130,6 @@ const ProjectDetails: React.FC = () => {
         });
     };
 
-
-
-    const loadImageAsync = (src: string): Promise<HTMLImageElement> => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-        });
-    };
-
-  
-
-
     const updateStatus = (partId: string, newStatus: Part["status"]) => {
         setProject(prev => prev ? {
             ...prev,
@@ -160,11 +155,13 @@ const ProjectDetails: React.FC = () => {
     const addPart = (newPart: Part) => {
         setProject(prev => (prev ? { ...prev, parts: [...prev.parts, newPart] } : null));
     };
+
     const removePart = (id: string) => {
         setProject(prev =>
             prev ? { ...prev, parts: prev.parts.filter(p => p.id !== id) } : null
         );
     };
+
     if (!project) return <div className="container mt-5">Nie znaleziono projektu.</div>;
 
     return (
@@ -177,10 +174,14 @@ const ProjectDetails: React.FC = () => {
                     <div className="left-column">
 
                         <img
-                            src={project.image}
+                            src={project.image || "/default-avatar.png"}
                             alt={`Zdjęcie: ${project.name}`}
                             style={{ width: "100%", borderRadius: "12px", marginBottom: "10px" }}
+                            onError={(e) => {
+                                e.currentTarget.src = "/default-avatar.png";
+                            }}
                         />
+
                     </div>
                     {/* Kalendarz */}
                     <div className="calendar-wrapper order-md-3 order-2">
@@ -188,7 +189,7 @@ const ProjectDetails: React.FC = () => {
                             <label className="label-date">Data Startu:</label>
                             <DatePicker
                                 selected={selectedStartDate}
-                                onChange={(date: Date) => setSelectedStartDate(date)}
+                                onChange={(date: Date | null) => setSelectedStartDate(date)}
                                 dateFormat="yyyy-MM-dd"
                                 className="date-picker burgundy-picker"
                                 placeholderText="Wybierz datę startu"
@@ -230,12 +231,13 @@ const ProjectDetails: React.FC = () => {
                             <label className="label-date mt-2">Data Zakończenia:</label>
                             <DatePicker
                                 selected={selectedEndDate}
-                                onChange={(date: Date) => setSelectedEndDate(date)}
+                                onChange={(date: Date | null) => setSelectedStartDate(date)}
                                 dateFormat="yyyy-MM-dd"
                                 className="date-picker burgundy-picker"
                                 placeholderText="Wybierz datę zakończenia"
                                 locale="pl"
-                                minDate={selectedStartDate}
+                                minDate={selectedStartDate !== null ? selectedStartDate : undefined}
+
                                 renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
                                     <div className="d-flex justify-content-between align-items-center px-2 py-1">
                                         <button
@@ -400,32 +402,30 @@ const ProjectDetails: React.FC = () => {
 
 
                 <Suspense fallback={<div>Ładowanie tabeli...</div>}>
-                <PartsTable
-                    parts={project.parts}
-                    updateStatus={updateStatus}
-                    updateField={updateField}
-                    addPart={addPart}
-                    removePart={removePart}
-                    editMode={editPartsMode}
-                    projectName={project.name}
-                    onEndEdit={() => setEditPartsMode(false)}
-                    onToggleEdit={() => setEditPartsMode(prev => !prev)}
-                    onGeneratePDF={() => project && generateProjectDetails(project)}
-
+                    <PartsTable
+                        parts={project.parts}
+                        updateStatus={updateStatus}
+                        updateField={updateField}
+                        addPart={addPart}
+                        removePart={removePart}
+                        editMode={editPartsMode}
+                        projectName={project.name}
+                        onEndEdit={() => setEditPartsMode(false)}
+                        onToggleEdit={() => setEditPartsMode(prev => !prev)}
+                        onGeneratePDF={() => project && generateProjectDetails(project)}
                     />
                 </Suspense>
 
-              
-                    {showFileModal && (
+                {showFileModal && (
                     <Suspense fallback={<div>Ładowanie plików...</div>}>
-                    <FileExplorerModal
-                        files={files}
-                        onClose={() => setShowFileModal(false)}
-                        onRemove={handleRemoveFile}
+                        <FileExplorerModal
+                            files={files}
+                            onClose={() => setShowFileModal(false)}
+                            onRemove={handleRemoveFile}
                         />
-                      </Suspense>
+                    </Suspense>
                 )}
-            </div> {/* ← zamknięcie div.container */}
+            </div>
         </>
     );
 };

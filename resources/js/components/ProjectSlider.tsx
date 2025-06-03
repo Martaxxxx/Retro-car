@@ -3,9 +3,7 @@ import React, { useRef } from "react";
 import styled from "styled-components";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ProjectData } from "../pages/projectData";
-import { projectMap } from "../pages/projectData";
-
+import { useProjectContext } from "../components/context/ProjectContext";
 
 const Container = styled.div`
   padding: 40px 20px;
@@ -117,47 +115,44 @@ const Progress = styled.div<{ $progress: number }>`
   transition: width 0.3s;
 `;
 
-interface Props {
-    projects: ProjectData[];
-}
+const ProjectSlider: React.FC = () => {
+  const { projects } = useProjectContext(); // <== TU są projekty z backendu
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-const ProjectSlider: React.FC<Props> = ({ projects }) => {
-    const sliderRef = useRef<HTMLDivElement>(null);
-    const navigate = useNavigate();
+  const scroll = (dir: "left" | "right") => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({
+        left: dir === "left" ? -300 : 300,
+        behavior: "smooth",
+      });
+    }
+  };
+  const handleClick = (name: string) => {
+    const encodedName = encodeURIComponent(name); // bezpieczne dla URL
+    navigate(`/projectdetails/${encodedName}`);
+  };
 
-    const scroll = (dir: "left" | "right") => {
-        if (sliderRef.current) {
-            sliderRef.current.scrollBy({
-                left: dir === "left" ? -300 : 300,
-                behavior: "smooth",
-            });
-        }
-    };
-
-    const handleClick = (id: string) => {
-        navigate(`/projectdetails/${id}`);
-    };
-
-    return (
-        <Container>
-            <Header>Projekty w realizacji</Header>
-            <SliderRow>
-                <ArrowButton onClick={() => scroll("left")}> <ChevronLeft /> </ArrowButton>
-                <SliderWrapper ref={sliderRef}>
-                    {projects.map((project) => (
-                        <SlideCard key={project.id} onClick={() => handleClick(project.id)}>
-                            {project.image ? <Image src={project.image} alt={project.name} /> : <PlaceholderBox />}
-                            <Title>{project.name}</Title>
-                            <ProgressBar>
-                                <Progress $progress={Math.floor(Math.random() * 60) + 30} />
-                            </ProgressBar>
-                        </SlideCard>
-                    ))}
-                </SliderWrapper>
-                <ArrowButton onClick={() => scroll("right")}> <ChevronRight /> </ArrowButton>
-            </SliderRow>
-        </Container>
-    );
+  return (
+    <Container>
+      <Header>Projekty w realizacji</Header>
+      <SliderRow>
+        <ArrowButton onClick={() => scroll("left")}> <ChevronLeft /> </ArrowButton>
+        <SliderWrapper ref={sliderRef}>
+          {projects.map((project) => (
+            <SlideCard key={project.id} onClick={() => handleClick(project.name)}>
+              {project.image ? <Image src={project.image} alt={project.name} /> : <PlaceholderBox />}
+              <Title>{project.name}</Title>
+              <ProgressBar>
+                <Progress $progress={Math.floor(Math.random() * 60) + 30} />
+              </ProgressBar>
+            </SlideCard>
+          ))}
+        </SliderWrapper>
+        <ArrowButton onClick={() => scroll("right")}> <ChevronRight /> </ArrowButton>
+      </SliderRow>
+    </Container>
+  );
 };
 
 export default ProjectSlider;

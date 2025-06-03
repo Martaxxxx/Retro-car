@@ -19,7 +19,8 @@ const App: React.FC = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/logowanie" element={<Login />} />
             <Route path="/renowacje" element={<Renovations />} />
-            <Route path="/projectdetails/:projectId" element={<ProjectDetails />} />
+            <Route path="/projectdetails/:projectName" element={<ProjectDetails />} />
+
             <Route path="/projectdetails/:projectId/lista_zakupow" element={<ShoppingList />} />
             <Route path="/ustawienia" element={<UserSettings />} />
             <Route path="/zarządzanie" element={<ManagerPanel />} />
@@ -30,4 +31,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
 

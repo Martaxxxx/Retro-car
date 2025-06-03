@@ -13,6 +13,15 @@ return new class extends Migration
     {
         Schema::create('projects', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('image')->nullable();
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->string('status')->default('W przygotowaniu');
+            $table->string('brand');
+            $table->string('model');
+            $table->integer('year');
+            $table->string('car_id')->unique();
             $table->timestamps();
         });
     }

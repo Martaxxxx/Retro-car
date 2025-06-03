@@ -81,7 +81,11 @@ const ShoppingList: React.FC = () => {
         <>
             <Navbar />
             <div className="container mt-5 pt-5">
-                <h5 className="project-breadcrumb" onClick={() => navigate(`/projectdetails/${projectId}`)}>
+                <h5
+                    className="project-breadcrumb"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/projectdetails/${projectId}`)}
+                >
                     ← {project.name} / {project.carId}
                 </h5>
 

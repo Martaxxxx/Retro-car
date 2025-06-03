@@ -1,24 +1,32 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { ProjectData, projectMap } from "../../pages/projectData";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import axios from "../../axios";
+import { ProjectData } from "../../pages/projectData";
 
 interface ProjectContextType {
     projects: ProjectData[];
-    addProject: (project: ProjectData) => void;
+    fetchProjects: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [projects, setProjects] = useState<ProjectData[]>(Object.values(projectMap));
+export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [projects, setProjects] = useState<ProjectData[]>([]);
 
-    const addProject = (project: ProjectData) => {
-        setProjects((prev) =>
-            prev.some(p => p.id === project.id) ? prev : [...prev, project]
-        );
+    const fetchProjects = async () => {
+        try {
+            const response = await axios.get("/projects");
+            setProjects(response.data);
+        } catch (error) {
+            console.error("❌ Błąd pobierania projektów:", error);
+        }
     };
 
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
     return (
-        <ProjectContext.Provider value={{ projects, addProject }}>
+        <ProjectContext.Provider value={{ projects, fetchProjects }}>
             {children}
         </ProjectContext.Provider>
     );
