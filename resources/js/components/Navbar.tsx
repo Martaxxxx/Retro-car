@@ -29,7 +29,7 @@ const Logo = styled.img`
   margin-left: 10px;
 `;
 
-const NavLinks = styled.div<{ isOpen: boolean }>`
+const NavLinks = styled.div<{ $isOpen: boolean }>`
   display: flex;
   gap: 60px;
   align-items: center;
@@ -43,9 +43,10 @@ const NavLinks = styled.div<{ isOpen: boolean }>`
     flex-direction: column;
     background: #e6e6e6;
     padding: 20px 0;
-    display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
+    display: ${({ $isOpen }) => ($isOpen ? "flex" : "none")};
   }
 `;
+
 
 const StyledRouterLink = styled(RouterLink)`
   font-size: 16px;
@@ -258,6 +259,7 @@ export const Navbar = () => {
         <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
         {user?.roles?.includes("admin") && (
           <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
+        
         )}
       </NavLinks>
 

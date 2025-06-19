@@ -13,6 +13,12 @@ export interface Part {
     status: "pending" | "ready" | "installed";
 }
 
+declare global {
+    interface Window {
+        QRCode: any;
+    }
+}
+
 interface Props {
     parts: Part[];
     updateStatus: (partId: string, newStatus: Part["status"]) => void;
@@ -41,6 +47,7 @@ const customSelectStyles = {
         cursor: 'pointer'
     })
 };
+
 const PartsTable: React.FC<Props> = ({
     parts,
     updateStatus,
@@ -76,12 +83,14 @@ const PartsTable: React.FC<Props> = ({
         script.async = true;
         script.onload = () => setQRCodeReady(true);
         document.body.appendChild(script);
-        return () => document.body.removeChild(script);
+        return () => {
+            document.body.removeChild(script);
+        };
     }, []);
 
     const generateQRCode = (id: string, partCode: string, partName: string) => {
         const element = document.getElementById(`qrcode-${id}`);
-        if (element && window.QRCode) {
+        if (element && typeof window.QRCode === "function") {
             element.innerHTML = "";
             new window.QRCode(element, {
                 text: `${projectName}, ${partCode}, ${partName}`,
@@ -92,15 +101,19 @@ const PartsTable: React.FC<Props> = ({
     };
 
     useEffect(() => {
-        if (isQRCodeReady) {
+        if (!isQRCodeReady || typeof window.QRCode !== "function") return;
+    
+        const timeout = setTimeout(() => {
             parts.forEach(part => {
-                if (part.partCode.trim() !== "" && part.name.trim() !== "") {
+                if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
                     generateQRCode(part.id, part.partCode, part.name);
                 }
             });
-        }
+        }, 100); // małe opóźnienie by dać czas na DOM i QRCode.js
+    
+        return () => clearTimeout(timeout);
     }, [parts, isQRCodeReady]);
-
+    
     const handleFilterChange = (field: keyof typeof filters, value: string) => {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
@@ -112,7 +125,7 @@ const PartsTable: React.FC<Props> = ({
         const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
 
         addPart({
-            id: `p${Date.now()}`,
+            id: `temp-${Date.now()}`,
             partCode: newPartCode,
             name: "",
             category: "",
@@ -173,10 +186,10 @@ const PartsTable: React.FC<Props> = ({
     }, [expandedNoteId]);
 
     const filteredParts = parts.filter(part =>
-        part.partCode.toLowerCase().includes(filters.partCode.toLowerCase()) &&
-        part.name.toLowerCase().includes(filters.name.toLowerCase()) &&
-        part.category.toLowerCase().includes(filters.category.toLowerCase()) &&
-        part.notes.toLowerCase().includes(filters.notes.toLowerCase()) &&
+        (part.partCode ?? "").toLowerCase().includes(filters.partCode.toLowerCase()) &&
+        (part.name ?? "").toLowerCase().includes(filters.name.toLowerCase()) &&
+        (part.category ?? "").toLowerCase().includes(filters.category.toLowerCase()) &&
+        (part.notes ?? "").toLowerCase().includes(filters.notes.toLowerCase()) &&
         (!filters.status || part.status === filters.status)
     );
 
@@ -253,7 +266,7 @@ const PartsTable: React.FC<Props> = ({
                                             className="form-control form-control-sm"
                                             placeholder={`Filtruj ${field}`}
                                             value={filters[field]}
-                                            onChange={e => handleFilterChange(field, e.target.value)}
+                                            onChange={e => handleFilterChange(field as keyof typeof filters, e.target.value)}
                                         />
                                     )}
                                 </td>
@@ -273,7 +286,7 @@ const PartsTable: React.FC<Props> = ({
                                 />
                             </td>
                             <td>
-                                {(part.partCode.trim() && part.name.trim()) ? (
+                                {((part.partCode ?? "").trim() && (part.name ?? "").trim()) ? (
                                     <div
                                         id={`qrcode-${part.id}`}
                                         style={{
@@ -285,14 +298,12 @@ const PartsTable: React.FC<Props> = ({
                                             justifyContent: "center"
                                         }}
                                         onClick={() => {
-                                            if (part.partCode.trim() && part.name.trim()) {
+                                            if ((part.partCode ?? "").trim() !== "" && (part.name ?? "").trim() !== "") {
                                                 setSelectedQR(`${projectName}, ${part.partCode}, ${part.name}`);
                                             }
                                         }}
                                     >
-                                        {(part.partCode.trim() && part.name.trim()) ? null : (
-                                            <span style={{ fontSize: "0.7rem", color: "#999" }}>Brak danych</span>
-                                        )}
+                                        {/* QR będzie renderowany przez skrypt */}
                                     </div>
                                 ) : (
                                     <span className="text-muted" style={{ fontSize: "0.8rem" }}>Uzupełnij dane</span>
@@ -303,7 +314,7 @@ const PartsTable: React.FC<Props> = ({
                                 {editMode ? (
                                     <input
                                         className="form-control form-control-sm"
-                                        value={part.name}
+                                        value={part.name ?? ""}
                                         onChange={(e) => updateField(part.id, "name", e.target.value)}
                                     />
                                 ) : part.name}
@@ -312,7 +323,7 @@ const PartsTable: React.FC<Props> = ({
                                 {editMode ? (
                                     <input
                                         className="form-control form-control-sm"
-                                        value={part.category}
+                                        value={part.category ?? ""}
                                         onChange={(e) => updateField(part.id, "category", e.target.value)}
                                     />
                                 ) : part.category}
@@ -321,16 +332,16 @@ const PartsTable: React.FC<Props> = ({
                                 {editMode ? (
                                     <textarea
                                         className="form-control form-control-sm"
-                                        value={part.notes}
+                                        value={part.notes ?? ""}
                                         onChange={(e) => updateField(part.id, "notes", e.target.value)}
                                         rows={2}
                                     />
-                                ) : part.notes.length > 40 ? (
+                                ) : (part.notes ?? "").length > 40 ? (
                                     <>
-                                        {part.notes.substring(0, 40)}...
+                                        {(part.notes ?? "").substring(0, 40)}...
                                         <button
                                             className="btn btn-link btn-sm"
-                                            onClick={() => setNoteModalContent(part.notes)}
+                                            onClick={() => setNoteModalContent(part.notes ?? "")}
                                             style={{ fontSize: "0.7rem", color: "#9C2F3B", fontWeight: "bold" }}
                                         >
                                             [Zobacz więcej]
@@ -341,28 +352,38 @@ const PartsTable: React.FC<Props> = ({
                                 )}
                             </td>
                             <td>
-                                {editMode ? (
-                                    <Select
-                                        styles={customSelectStyles}
-                                        classNamePrefix="react-select"
-                                        placeholder="Status"
-                                        options={[
-                                            { value: "pending", label: "W przygotowaniu" },
-                                            { value: "ready", label: "Gotowy do montażu" },
-                                            { value: "installed", label: "Zamontowany" },
-                                        ]}
-                                        value={[
-                                            { value: "pending", label: "W przygotowaniu" },
-                                            { value: "ready", label: "Gotowy do montażu" },
-                                            { value: "installed", label: "Zamontowany" },
-                                        ].find(opt => opt.value === part.status)}
-                                        onChange={(selected) => updateStatus(part.id, selected?.value as Part["status"])}
-                                        isSearchable={false}
-                                    />
+                            {editMode ? (
+    <Select
+        styles={customSelectStyles}
+        classNamePrefix="react-select"
+        placeholder="Status"
+        options={[
+            { value: "pending", label: "W przygotowaniu" },
+            { value: "ready", label: "Gotowy do montażu" },
+            { value: "installed", label: "Zamontowany" },
+        ]}
+        value={[
+            { value: "pending", label: "W przygotowaniu" },
+            { value: "ready", label: "Gotowy do montażu" },
+            { value: "installed", label: "Zamontowany" },
+        ].find(opt => opt.value === part.status)}
+        onChange={(selected) =>
+            updateStatus(part.id, selected?.value as Part["status"])
+        }
+        isSearchable={false}
+    />
+) : (
+    <span>
+        {
+            {
+                pending: "W przygotowaniu",
+                ready: "Gotowy do montażu",
+                installed: "Zamontowany",
+            }[part.status]
+        }
+    </span>
+)}
 
-                                ) : (
-                                    { pending: "W przygotowaniu", ready: "Gotowy do montażu", installed: "Zamontowany" }[part.status]
-                                )}
                             </td>
                             {editMode && (
                                 <td className="text-center">
@@ -388,7 +409,7 @@ const PartsTable: React.FC<Props> = ({
                         Dodaj wiersz
                     </button>
                     <button className="btn btn-custom" onClick={onEndEdit}>
-                        Zakończ edycję części
+                        Zapisz zmiany
                     </button>
                 </div>
             )}

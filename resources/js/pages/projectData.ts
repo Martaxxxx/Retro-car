@@ -13,6 +13,7 @@ export interface ProjectData {
     carId: string;
     assignedTo?: string[];
     parts: Part[];
+    description?: string;
 }
 
 export const projectMap: Record<string, ProjectData> = {

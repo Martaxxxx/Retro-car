@@ -1,4 +1,3 @@
-
 import React, { useRef } from "react";
 import styled from "styled-components";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -116,7 +115,7 @@ const Progress = styled.div<{ $progress: number }>`
 `;
 
 const ProjectSlider: React.FC = () => {
-  const { projects } = useProjectContext(); // <== TU są projekty z backendu
+  const { projects } = useProjectContext();
   const sliderRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -128,20 +127,27 @@ const ProjectSlider: React.FC = () => {
       });
     }
   };
-  const handleClick = (name: string) => {
-    const encodedName = encodeURIComponent(name); // bezpieczne dla URL
-    navigate(`/projectdetails/${encodedName}`);
+
+  const handleClick = (id: string, name: string) => {
+    const encodedName = encodeURIComponent(name);
+    navigate(`/projectdetails/${id}/${encodedName}`);
   };
 
   return (
     <Container>
       <Header>Projekty w realizacji</Header>
       <SliderRow>
-        <ArrowButton onClick={() => scroll("left")}> <ChevronLeft /> </ArrowButton>
+        <ArrowButton onClick={() => scroll("left")}>
+          <ChevronLeft />
+        </ArrowButton>
         <SliderWrapper ref={sliderRef}>
           {projects.map((project) => (
-            <SlideCard key={project.id} onClick={() => handleClick(project.name)}>
-              {project.image ? <Image src={project.image} alt={project.name} /> : <PlaceholderBox />}
+            <SlideCard key={project.id} onClick={() => handleClick(project.id, project.name)}>
+              {project.image ? (
+                <Image src={project.image} alt={project.name} />
+              ) : (
+                <PlaceholderBox />
+              )}
               <Title>{project.name}</Title>
               <ProgressBar>
                 <Progress $progress={Math.floor(Math.random() * 60) + 30} />
@@ -149,7 +155,9 @@ const ProjectSlider: React.FC = () => {
             </SlideCard>
           ))}
         </SliderWrapper>
-        <ArrowButton onClick={() => scroll("right")}> <ChevronRight /> </ArrowButton>
+        <ArrowButton onClick={() => scroll("right")}>
+          <ChevronRight />
+        </ArrowButton>
       </SliderRow>
     </Container>
   );

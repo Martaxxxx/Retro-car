@@ -6,6 +6,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RenovationController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\PartController;
+use App\Http\Controllers\ShoppingListController;
 
 
 // 🏠 Widok SPA (Vue/React)
@@ -43,8 +45,23 @@ Route::middleware(['auth'])->group(function () {
 // 📦 Renowacje (jeśli mają być publiczne – bez auth)
 Route::get('/renovations', [RenovationController::class, 'index']);
 //podstrona projektu ze slajdera
-Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']);
+// BĘDZIE TAK:
+Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
 
+
+
+
+Route::get('/projects/{project}/parts', [PartController::class, 'index']);
+Route::post('/projects/{project}/parts', [PartController::class, 'store']);
+Route::put('/parts/{part}', [PartController::class, 'update']);
+Route::delete('/parts/{part}', [PartController::class, 'destroy']);
+
+Route::middleware('auth')->group(function () {
+    Route::get('/projects/{project}/shopping-items', [ShoppingListController::class, 'index']);
+    Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
+    Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
+    Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
+});
 
 Route::get('/{any}', function () {
     return view('app');

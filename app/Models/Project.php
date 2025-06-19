@@ -18,4 +18,10 @@ class Project extends Model
         'year',
         'car_id',
     ];
+
+    // RELACJA DO CZĘŚCI
+    public function parts()
+    {
+        return $this->hasMany(\App\Models\Part::class);
+    }
 }

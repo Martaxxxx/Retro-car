@@ -5,29 +5,30 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Project;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class ProjectController extends Controller
 {
-    // ZWRACA WSZYSTKIE PROJEKTY
+    // 📦 Zwraca wszystkie projekty
     public function index()
     {
         $projects = Project::all();
         return response()->json($projects);
     }
 
-    // ZAPISUJE NOWY PROJEKT
+    // 💾 Zapisuje nowy projekt
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'image' => 'nullable|file|image|max:5120', // zmiana: obsługa pliku
+            'image' => 'nullable|file|image|max:5120',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'status' => 'required|string',
             'brand' => 'required|string|max:100',
             'model' => 'required|string|max:100',
             'year' => 'required|integer|min:1885|max:' . date('Y'),
-            'car_id' => 'required|string|max:100',
+            'car_id' => 'required|string|max:100|unique:projects,car_id',
         ]);
 
         if ($validator->fails()) {
@@ -37,13 +38,14 @@ class ProjectController extends Controller
             ], 422);
         }
 
-        // Obsługa pliku zdjęcia
+        // 📸 Obsługa pliku obrazu
         $imagePath = null;
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('uploads', 'public');
             $imagePath = '/storage/' . $path;
         }
 
+        // 🧱 Tworzenie nowego projektu
         $project = Project::create([
             'name' => $request->name,
             'image' => $imagePath,
@@ -62,20 +64,27 @@ class ProjectController extends Controller
         ], 201);
     }
 
-    // ✅ ZWRACA PROJEKT NA PODSTAWIE NAZWY
-    public function showByName($name)
-    {
-        $project = Project::where('name', $name)->first();
-    
-        if (!$project) {
-            return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
-        }
-    
-        // Dodaj dane tymczasowe, dopiero po sprawdzeniu że projekt istnieje
-        $project->assignedTo = ['Blacharz_Arek', 'Lakiernik_Kasia'];
-        $project->parts = [];
-        $project->description = 'Tutaj będzie opis projektu';
-    
-        return response()->json($project);
+ // 🔍 Pokazuje projekt po ID i nazwie
+public function showByIdAndName($id, $name)
+{
+    $decodedName = urldecode($name); // ← ważne!
+    \Log::info("🔍 Szukanie projektu ID [$id] z nazwą [$decodedName]");
+
+    $project = Project::where('id', $id)
+        ->whereRaw('LOWER(name) = ?', [strtolower($decodedName)])
+        ->first();
+
+    if (!$project) {
+        return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
     }
-}    
+
+    // Tu możesz pobrać przypisanych użytkowników, części itd.
+    $project->assignedTo = ['Blacharz_Arek', 'Lakiernik_Kasia'];
+    $project->parts = $project->parts()->get(); // ← relacja w modelu
+    $project->description = 'Tutaj będzie opis projektu';
+
+    return response()->json($project);
+}
+
+
+}

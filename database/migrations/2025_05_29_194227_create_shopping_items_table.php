@@ -13,10 +13,19 @@ return new class extends Migration
     {
         Schema::create('shopping_items', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('project_id');
+            $table->string('name');
+            $table->text('notes')->nullable();
+            $table->decimal('priceNet', 10, 2)->default(0);
+            $table->decimal('priceGross', 10, 2)->default(0);
+            $table->enum('status', ['dozamowienia', 'zamowione', 'dostarczone'])->default('dozamowienia');
+            $table->string('link')->nullable();
+            $table->boolean('invoiceAttached')->default(false);
             $table->timestamps();
+    
+            $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
         });
     }
-
     /**
      * Reverse the migrations.
      */
