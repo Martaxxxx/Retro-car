@@ -1,21 +1,19 @@
-import { useParams } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import { Part } from "../components/PartsTable";
-import DatePicker, { registerLocale } from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import "../styles/ProjectDetails.css";
-import { jsPDF } from "jspdf";
-import QRCode from "qrcode";
-import autoTable from "jspdf-autotable";
-import robotoFont from "../styles/fonts/Roboto_Italic";
-import { pl } from "date-fns/locale";
-import { useProjectContext } from "../components/context/ProjectContext";
-import { ProjectData } from "../pages/projectData";
-import { Link } from "react-router-dom";
 import React, { useEffect, useState, lazy, Suspense } from "react";
+import { useParams, Link } from "react-router-dom";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { pl } from "date-fns/locale";
+import "react-datepicker/dist/react-datepicker.css";
+
+import Navbar from "../components/Navbar";
+import { ProjectData } from "../pages/projectData";
+import { Part } from "../components/PartsTable";
 import { generateProjectDetails } from "../utils/generateProjectDetails";
 import axios from "../axios";
 
+registerLocale("pl", pl);
+
+const PartsTable = lazy(() => import("../components/PartsTable"));
+const FileExplorerModal = lazy(() => import("../components/FileExplorerModal"));
 
 interface FileData {
     name: string;
@@ -24,46 +22,66 @@ interface FileData {
     file: File;
 }
 
-registerLocale("pl", pl);
-const PartsTable = lazy(() => import("../components/PartsTable"));
-const FileExplorerModal = lazy(() => import("../components/FileExplorerModal"));
-
 const ProjectDetails: React.FC = () => {
-    const { projectName } = useParams<{ projectName: string }>();
-    const { projects } = useProjectContext();
-
+    const { projectId, name } = useParams<{ projectId: string; name: string }>();
     const [project, setProject] = useState<ProjectData | null>(null);
-    const [editProjectMode, setEditProjectMode] = useState(false);
-    const [editPartsMode, setEditPartsMode] = useState(false);
     const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
     const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
-    const [timeLeft, setTimeLeft] = useState<string>("");
-
+    const [editProjectMode, setEditProjectMode] = useState(false);
+    const [editPartsMode, setEditPartsMode] = useState(false);
+    const [files, setFiles] = useState<FileData[]>([]);
+    const [showFileModal, setShowFileModal] = useState(false);
     const [newRole, setNewRole] = useState("");
     const [newName, setNewName] = useState("");
+    const [timeLeft, setTimeLeft] = useState("");
 
     useEffect(() => {
         const fetchProject = async () => {
             try {
-                const res = await axios.get(`/projectdetails/${projectName}`);
-                setProject(res.data);
-                setSelectedStartDate(new Date(res.data.start_date));
-                setSelectedEndDate(new Date(res.data.end_date));
-            } catch (error) {
-                console.error("❌ Błąd ładowania projektu:", error);
+                const res = await axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`);
+                const data = res.data;
+                setProject({
+                    id: data.id,
+                    name: data.name,
+                    image: data.image,
+                    startDate: data.start_date,
+                    endDate: data.end_date,
+                    status: data.status,
+                    brand: data.brand,
+                    model: data.model,
+                    year: data.year,
+                    carId: data.car_id,
+                    assignedTo: data.assignedTo || [],
+                    description: data.description || "",
+                    parts: (data.parts || []).map((part: any) => ({
+                        id: String(part.id),
+                        partCode: part.part_code, // <-- tylko to
+                        name: part.name,
+                        category: part.category,
+                        notes: part.notes,
+                        status: part.status,
+                    })),
+                    
+                    
+                    
+                    
+                });
+                setSelectedStartDate(new Date(data.start_date));
+                setSelectedEndDate(new Date(data.end_date));
+            } catch (err) {
+                console.error("❌ Błąd ładowania projektu:", err);
             }
         };
 
-        if (projectName) {
+        if (projectId && name) {
             fetchProject();
         }
-    }, [projectName]);
-
+    }, [projectId, name]);
 
     useEffect(() => {
         if (project) {
             const endDate = new Date(project.endDate);
-            const calculateTimeLeft = () => {
+            const timer = setInterval(() => {
                 const now = new Date();
                 const diff = endDate.getTime() - now.getTime();
                 if (diff <= 0) return setTimeLeft("Projekt zakończony!");
@@ -72,209 +90,213 @@ const ProjectDetails: React.FC = () => {
                 const minutes = Math.floor((diff / (1000 * 60)) % 60);
                 const seconds = Math.floor((diff / 1000) % 60);
                 setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-            };
-            const timer = setInterval(calculateTimeLeft, 1000);
+            }, 1000);
             return () => clearInterval(timer);
         }
     }, [project]);
 
-    const [files, setFiles] = useState<FileData[]>([]);
-    const [showFileModal, setShowFileModal] = useState(false);
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const uploaded = e.target.files;
-        if (!uploaded) return;
-        const newFiles: FileData[] = Array.from(uploaded).map(file => ({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            file: file,
-        }));
-        setFiles(prev => [...prev, ...newFiles]);
-    };
-
-    const handleRemoveFile = (index: number) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
     const handleInputChange = (field: keyof ProjectData, value: string) => {
-        setProject(prev => prev ? { ...prev, [field]: value } : null);
+        setProject((prev) => (prev ? { ...prev, [field]: value } : null));
     };
 
     const saveProjectDates = () => {
-        setProject(prev => prev ? {
-            ...prev,
-            startDate: selectedStartDate?.toISOString() || prev.startDate,
-            endDate: selectedEndDate?.toISOString() || prev.endDate,
-        } : null);
+        setProject((prev) =>
+            prev
+                ? {
+                    ...prev,
+                    startDate: selectedStartDate?.toISOString() || prev.startDate,
+                    endDate: selectedEndDate?.toISOString() || prev.endDate,
+                }
+                : null
+        );
     };
 
     const addUser = () => {
         if (!newRole || !newName) return;
         const newUser = `${newRole}_${newName}`;
-        setProject(prev =>
-            prev ? {
-                ...prev,
-                assignedTo: [...(prev.assignedTo || []), newUser]
-            } : null
+        setProject((prev) =>
+            prev ? { ...prev, assignedTo: [...(prev.assignedTo || []), newUser] } : null
         );
         setNewRole("");
         setNewName("");
     };
 
-    const removeUser = (userToRemove: string) => {
-        setProject(prev => {
-            if (!prev || !prev.assignedTo) return prev;
-            const updated = prev.assignedTo.filter(u => u !== userToRemove);
-            return { ...prev, assignedTo: updated };
-        });
+    const removeUser = (user: string) => {
+        setProject((prev) =>
+            prev
+                ? {
+                    ...prev,
+                    assignedTo: (prev.assignedTo ?? []).filter((u) => u !== user),
+                }
+                : null
+        );
     };
 
-    const updateStatus = (partId: string, newStatus: Part["status"]) => {
-        setProject(prev => prev ? {
-            ...prev,
-            parts: prev.parts.map(p =>
-                p.id === partId ? { ...p, status: newStatus } : p
-            ),
-        } : null);
+    const updateStatus = async (partId: string, newStatus: Part["status"]) => {
+        try {
+            await axios.put(`/parts/${partId}`, { status: newStatus });
+            setProject((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        parts: prev.parts.map((p) =>
+                            p.id === partId ? { ...p, status: newStatus } : p
+                        ),
+                    }
+                    : null
+            );
+        } catch (error) {
+            console.error("Błąd podczas aktualizacji statusu części:", error);
+        }
     };
 
-    const updateField = (
+    const updateField = async (
         partId: string,
         field: keyof Omit<Part, "id" | "partCode">,
         value: string
     ) => {
-        setProject(prev => prev ? {
-            ...prev,
-            parts: prev.parts.map(p =>
-                p.id === partId ? { ...p, [field]: value } : p
-            ),
-        } : null);
+        try {
+            const part = project?.parts.find((p) => p.id === partId);
+            if (!part) return;
+            const id = part.id;
+
+            if (typeof id === "string" && (id.startsWith("temp-") || id === "" || id.startsWith("p"))) {
+                setProject((prev) =>
+                    prev
+                        ? {
+                            ...prev,
+                            parts: prev.parts.map((p) =>
+                                p.id === partId ? { ...p, [field]: value } : p
+                            ),
+                        }
+                        : null
+                );
+            } else {
+                await axios.put(`/parts/${partId}`, { [field]: value });
+                setProject((prev) =>
+                    prev
+                        ? {
+                            ...prev,
+                            parts: prev.parts.map((p) =>
+                                p.id === partId ? { ...p, [field]: value } : p
+                            ),
+                        }
+                        : null
+                );
+            }
+        } catch (error) {
+            console.error("Błąd aktualizacji pola części:", error);
+        }
     };
 
     const addPart = (newPart: Part) => {
-        setProject(prev => (prev ? { ...prev, parts: [...prev.parts, newPart] } : null));
-    };
-
-    const removePart = (id: string) => {
-        setProject(prev =>
-            prev ? { ...prev, parts: prev.parts.filter(p => p.id !== id) } : null
+        setProject((prev) =>
+            prev ? { ...prev, parts: [...prev.parts, newPart] } : null
         );
     };
 
+    const removePart = async (id: string) => {
+        try {
+            await axios.delete(`/parts/${id}`);
+            setProject((prev) =>
+                prev ? { ...prev, parts: prev.parts.filter((p) => p.id !== id) } : null
+            );
+        } catch (error) {
+            console.error("Błąd usuwania części:", error);
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const uploaded = e.target.files;
+        if (!uploaded) return;
+        const newFiles: FileData[] = Array.from(uploaded).map((file) => ({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            file: file,
+        }));
+        setFiles((prev) => [...prev, ...newFiles]);
+    };
+
+    const handleRemoveFile = (index: number) => {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const savePartsEdits = async () => {
+        if (!project) return;
+    
+        try {
+            let updatedParts: Part[] = [];
+    
+            for (const part of project.parts) {
+                const id = part.id;
+    
+                if (typeof id === "string" && id.startsWith("temp-")) {
+                    if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
+                        const response = await axios.post(`/projects/${project.id}/parts`, {
+                            part_code: part.partCode,
+                            name: part.name,
+                            category: part.category,
+                            notes: part.notes,
+                            status: part.status,
+                        });
+    
+                        updatedParts.push({
+                            ...response.data,
+                            partCode: response.data.partCode || response.data.part_code || part.partCode,
+                        });
+                    }
+                } else {
+                    await axios.put(`/parts/${part.id}`, {
+                        name: part.name,
+                        category: part.category,
+                        notes: part.notes,
+                        status: part.status,
+                    });
+    
+                    updatedParts.push(part);
+                }
+            }
+    
+            setProject((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        parts: updatedParts,
+                    }
+                    : null
+            );
+    
+            setEditPartsMode(false);
+        } catch (err) {
+            alert("Błąd zapisu części: " + err);
+        }
+    };
+    
+
     if (!project) return <div className="container mt-5">Nie znaleziono projektu.</div>;
+
 
     return (
         <>
             <Navbar />
             <div className="container mt-5 pt-5">
-                <div className="d-flex justify-content-between align-items-start flex-wrap gap-4">
-
-                    {/* Obraz */}
-                    <div className="left-column">
-
+                <div className="row">
+                    {/* Zdjęcie */}
+                    <div className="col-md-4 order-md-1">
                         <img
-                            src={project.image || "/default-avatar.png"}
+                            src={
+                                project.image?.startsWith("/storage/")
+                                    ? project.image
+                                    : `/storage/${project.image}`
+                            }
                             alt={`Zdjęcie: ${project.name}`}
-                            style={{ width: "100%", borderRadius: "12px", marginBottom: "10px" }}
+                            className="img-fluid rounded mb-3"
                             onError={(e) => {
                                 e.currentTarget.src = "/default-avatar.png";
                             }}
                         />
-
                     </div>
-                    {/* Kalendarz */}
-                    <div className="calendar-wrapper order-md-3 order-2">
-                        <div className="calendar-section">
-                            <label className="label-date">Data Startu:</label>
-                            <DatePicker
-                                selected={selectedStartDate}
-                                onChange={(date: Date | null) => setSelectedStartDate(date)}
-                                dateFormat="yyyy-MM-dd"
-                                className="date-picker burgundy-picker"
-                                placeholderText="Wybierz datę startu"
-                                locale="pl"
-                                renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-                                    <div className="d-flex justify-content-between align-items-center px-2 py-1">
-                                        <button
-                                            onClick={decreaseMonth}
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                fontSize: "20px",
-                                                cursor: "pointer",
-                                            }}
-                                        >
-                                            ‹
-                                        </button>
-                                        <div className="text-center" style={{ lineHeight: "1.2" }}>
-                                            <div style={{ fontSize: "20px", fontWeight: "bold" }}>
-                                                {date.toLocaleDateString("pl-PL", { month: "long" })}
-                                            </div>
-                                            <div style={{ fontSize: "20px" }}>{date.getFullYear()}</div>
-                                        </div>
-                                        <button
-                                            onClick={increaseMonth}
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                fontSize: "20px",
-                                                cursor: "pointer",
-                                            }}
-                                        >
-                                            ›
-                                        </button>
-                                    </div>
-                                )}
-                            />
-
-                            <label className="label-date mt-2">Data Zakończenia:</label>
-                            <DatePicker
-                                selected={selectedEndDate}
-                                onChange={(date: Date | null) => setSelectedStartDate(date)}
-                                dateFormat="yyyy-MM-dd"
-                                className="date-picker burgundy-picker"
-                                placeholderText="Wybierz datę zakończenia"
-                                locale="pl"
-                                minDate={selectedStartDate !== null ? selectedStartDate : undefined}
-
-                                renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-                                    <div className="d-flex justify-content-between align-items-center px-2 py-1">
-                                        <button
-                                            onClick={decreaseMonth}
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                fontSize: "20px",
-                                                cursor: "pointer",
-                                            }}
-                                        >
-                                            ‹
-                                        </button>
-                                        <div className="text-center" style={{ lineHeight: "1.2" }}>
-                                            <div style={{ fontSize: "20px", fontWeight: "bold" }}>
-                                                {date.toLocaleDateString("pl-PL", { month: "long" })}
-                                            </div>
-                                            <div style={{ fontSize: "20px" }}>{date.getFullYear()}</div>
-                                        </div>
-                                        <button
-                                            onClick={increaseMonth}
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                fontSize: "20px",
-                                                cursor: "pointer",
-                                            }}
-                                        >
-                                            ›
-                                        </button>
-                                    </div>
-                                )}
-                            />
-                        </div>
-                    </div>
-
-
 
                     {/* Dane projektu */}
                     <div style={{ flex: "1 1 40%", maxWidth: "40%", minWidth: "280px" }} className="order-md-2 order-3">
@@ -365,43 +387,58 @@ const ProjectDetails: React.FC = () => {
                                 <p><strong>Marka:</strong> {project.brand}</p>
                                 <p><strong>Model:</strong> {project.model}</p>
                                 <p><strong>Rocznik:</strong> {project.year}</p>
-                                <p><strong>Numer zlecenia:</strong> {project.carId}</p>
+                                <p><strong>Zlecenie:</strong> {project.carId}</p>
                                 <p><strong>Użytkownicy:</strong> {project.assignedTo?.join(", ") ?? "Brak"}</p>
                             </>
                         )}
 
-                        <div className="d-flex mt-3 flex-wrap gap-2">
+                        <div className="d-flex flex-wrap gap-2 mt-3">
                             <input type="file" className="form-control" onChange={handleFileUpload} multiple />
-                            <Link
-                                to={`/projectdetails/${project.id}/lista_zakupow`}
-                                className="btn btn-outline-dark hover-black"
-                            >
+                            <Link to={`/projectdetails/${project.id}/lista_zakupow`} className="btn btn-outline-dark">
                                 🛒 Lista zakupów
                             </Link>
-
-
-                            <button
-                                className="btn btn-outline-dark hover-black"
-                                onClick={() => setShowFileModal(true)}
-                            >
+                            <button className="btn btn-outline-dark" onClick={() => setShowFileModal(true)}>
                                 📁 Moje pliki ({files.length})
                             </button>
-                            <button
-                                className="btn btn-outline-dark hover-black"
-                                onClick={() => setEditProjectMode(!editProjectMode)}
-                            >
+                            <button className="btn btn-outline-dark" onClick={() => setEditProjectMode(!editProjectMode)}>
                                 {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
                             </button>
+                           
+                        </div>
+                    </div>
+
+                    {/* Kalendarz */}
+                    <div className="calendar-wrapper order-md-3 order-2" style={{ marginLeft: "20px" }}>
+                        <div className="calendar-section">
+                            <label className="label-date">Data Startu:</label>
+                            <DatePicker
+                                selected={selectedStartDate}
+                                onChange={(date: Date | null) => setSelectedStartDate(date)}
+                                dateFormat="yyyy-MM-dd"
+                                className="date-picker burgundy-picker"
+                                placeholderText="Wybierz datę startu"
+                                locale="pl"
+                            />
+
+                            <label className="label-date mt-2">Data Zakończenia:</label>
+                            <DatePicker
+                                selected={selectedEndDate}
+                                onChange={(date: Date | null) => setSelectedEndDate(date)}
+                                dateFormat="yyyy-MM-dd"
+                                className="date-picker burgundy-picker"
+                                placeholderText="Wybierz datę zakończenia"
+                                locale="pl"
+                                minDate={selectedStartDate ?? undefined}
+                            />
                         </div>
                     </div>
                 </div>
 
-                <div className="time-left mb-3 mt-4" style={{ color: "#b03a2e", fontWeight: "bold" }}>
+                <div className="time-left mt-4" style={{ color: "#b03a2e", fontWeight: "bold" }}>
                     ⏳ <strong>Pozostały czas do zakończenia:</strong> {timeLeft}
                 </div>
 
-
-                <Suspense fallback={<div>Ładowanie tabeli...</div>}>
+                <Suspense fallback={<div>Ładowanie części...</div>}>
                     <PartsTable
                         parts={project.parts}
                         updateStatus={updateStatus}
@@ -410,9 +447,12 @@ const ProjectDetails: React.FC = () => {
                         removePart={removePart}
                         editMode={editPartsMode}
                         projectName={project.name}
-                        onEndEdit={() => setEditPartsMode(false)}
-                        onToggleEdit={() => setEditPartsMode(prev => !prev)}
-                        onGeneratePDF={() => project && generateProjectDetails(project)}
+                        onEndEdit={async () => {
+                            await savePartsEdits(); // zapisuje zmiany
+                            setEditPartsMode(false); // kończy edycję
+                        }}
+                        onToggleEdit={() => setEditPartsMode((prev) => !prev)}
+                        onGeneratePDF={() => generateProjectDetails(project)}
                     />
                 </Suspense>
 

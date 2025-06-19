@@ -7,10 +7,10 @@ const spin = keyframes`
   100% { transform: rotate(360deg); }
 `;
 
-const ContentWrapper = styled.div<{ dimmed: boolean }>`
+const ContentWrapper = styled.div<{ $dimmed: boolean }>`
   transition: opacity 0.3s ease;
-  opacity: ${({ dimmed }) => (dimmed ? 0.4 : 1)};
-  pointer-events: ${({ dimmed }) => (dimmed ? "none" : "auto")};
+  opacity: ${({ $dimmed }) => ($dimmed ? 0.4 : 1)};
+  pointer-events: ${({ $dimmed }) => ($dimmed ? "none" : "auto")};
 `;
 
 const SpinnerWrapper = styled.div`
@@ -39,7 +39,7 @@ const GlobalLoader: React.FC<LoaderProps> = ({ children }) => {
 
     return (
         <>
-            <ContentWrapper dimmed={isLoading}>
+            <ContentWrapper $dimmed={isLoading}>
                 {children}
             </ContentWrapper>
             {isLoading && (
