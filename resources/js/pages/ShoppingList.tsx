@@ -1,73 +1,114 @@
 ﻿import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useProjectContext } from "../components/context/ProjectContext";
 import ShoppingListTable, { ShoppingItem } from "../components/ShoppingListTable";
 import { generateShoppingListPdf } from "../utils/generateShoppingListPdf";
 import Navbar from "../components/Navbar";
 import "../styles/ProjectDetails.css";
 import "../styles/ShoppingList.css";
-import axios from "../axios"; 
+import axios from "../axios";
+import WheelSpinner from "../components/WheelSpinner";
+import { ProjectData } from "../pages/projectData";
 
+type LocalNewRow = Omit<ShoppingItem, "id">;
 
 const ShoppingList: React.FC = () => {
     const { projectId } = useParams<{ projectId: string }>();
     const navigate = useNavigate();
     const { projects } = useProjectContext();
-    const project = projects.find(p => p.id === projectId);
 
     const [editMode, setEditMode] = useState(false);
     const [showSummary, setShowSummary] = useState(true);
     const [items, setItems] = useState<ShoppingItem[]>([]);
-    const [filters, setFilters] = useState({
-        name: "",
-        notes: "",
-        link: "",
-        status: ""
-    });
+    const [localNewRow, setLocalNewRow] = useState<LocalNewRow | null>(null);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [fallbackProject, setFallbackProject] = useState<ProjectData | null>(null);
+
+    const contextProject = projects.find(p => String(p.id) === String(projectId));
+    const project = contextProject || fallbackProject;
+
+    useEffect(() => {
+        if (!contextProject && projectId) {
+            axios.get(`/api/projectdetails/${projectId}`)
+                .then(res => setFallbackProject(res.data))
+                .catch(err => console.error("Nie udało się pobrać projektu:", err));
+        }
+    }, [contextProject, projectId]);
 
     useEffect(() => {
         if (!projectId) return;
-      
+        setLoading(true);
         axios.get(`/projects/${projectId}/shopping-items`)
-          .then(res => {
-            const data = res.data;
-            if (Array.isArray(data)) {
-              setItems(data);
-            } else {
-              console.warn("Oczekiwano tablicy, ale przyszło:", data);
-              setItems([]);
-            }
-          })
-          .catch(err => {
-            console.error("Błąd ładowania zakupów:", err);
-            setItems([]);
-          });
-      }, [projectId]);
-      
-    
+            .then(res => {
+                const data = res.data;
+                setItems(Array.isArray(data) ? data : []);
+            })
+            .catch(() => setItems([]))
+            .finally(() => setLoading(false));
+    }, [projectId]);
 
-    const handleUpdate = async (
-        id: string,
-        field: keyof ShoppingItem,
-        value: string | number | boolean | File[]
-    ) => {
+    const loadInvoicesForItem = async (itemId: string) => {
+        try {
+            const res = await axios.get(`/shopping-items/${itemId}/invoices`);
+            const invoiceLinks = res.data.invoices || [];
+            setItems(prev =>
+                prev.map(item =>
+                    item.id === itemId
+                        ? { ...item, invoicesDetails: invoiceLinks, invoicesLoaded: true }
+                        : item
+                )
+            );
+        } catch (error) {
+            console.error("Błąd podczas ładowania faktur:", error);
+        }
+    };
+
+    const handleUpdate = async (id: string, field: keyof ShoppingItem, value: any) => {
         const itemToUpdate = items.find(item => item.id === id);
         if (!itemToUpdate) return;
+
+        if (field === "name" && typeof value === "string" && value.trim() === "") {
+            alert("Nazwa pozycji jest wymagana!");
+            return;
+        }
 
         const updatedItem = { ...itemToUpdate, [field]: value };
 
         try {
-            await axios.put(`/shopping-items/${id}`, updatedItem);
+            const formData = new FormData();
+            formData.append("name", updatedItem.name);
+            formData.append("notes", updatedItem.notes || "");
+            formData.append("priceNet", String(updatedItem.priceNet));
+            formData.append("priceGross", String(updatedItem.priceGross));
+            formData.append("status", updatedItem.status);
+            formData.append("link", updatedItem.link || "");
+            if (updatedItem.invoices && updatedItem.invoices.length > 0) {
+                for (const file of updatedItem.invoices) {
+                    if (file instanceof File) {
+                        formData.append("invoices[]", file);
+                    }
+                }
+            }
+
+            await axios.post(`/shopping-items/${id}?_method=PUT`, formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+
             setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
-        } catch (error) {
-            console.error("Błąd podczas aktualizacji", error);
+        } catch (error: any) {
+            if (error.response?.data?.errors?.name) {
+                alert("Błąd: " + error.response.data.errors.name.join(", "));
+            }
         }
     };
 
-    const handleAddItem = async () => {
-        if (!projectId) return;
+    const handleLocalNewRowChange = (field: keyof LocalNewRow, value: any) => {
+        setLocalNewRow(prev => prev ? { ...prev, [field]: value } : null);
+    };
 
-        const newItem: Omit<ShoppingItem, 'id'> & { project_id: string } = {
+    const handleAddEmptyRow = () => {
+        setLocalNewRow({
             name: "",
             notes: "",
             priceGross: 0,
@@ -76,65 +117,98 @@ const ShoppingList: React.FC = () => {
             link: "",
             invoiceAttached: false,
             invoices: [],
-            project_id: projectId
-        };
+        });
+        setAddError(null);
+    };
 
-        try {
-            const response = await axios.post('/shopping-items', newItem);
-            setItems(prev => [...prev, response.data]);
-        } catch (error) {
-            console.error("Błąd podczas dodawania", error);
+    const handleSaveNewRow = async () => {
+        if (!projectId || !localNewRow) return;
+        if (localNewRow.name.trim() === "") {
+            setAddError("Nazwa pozycji jest wymagana!");
+            return;
         }
+        setAddError(null);
+        try {
+            const formData = new FormData();
+            formData.append("name", localNewRow.name);
+            formData.append("notes", localNewRow.notes || "");
+            formData.append("priceNet", String(localNewRow.priceNet));
+            formData.append("priceGross", String(localNewRow.priceGross));
+            formData.append("status", localNewRow.status);
+            formData.append("link", localNewRow.link || "");
+            if (localNewRow.invoices && localNewRow.invoices.length > 0) {
+                for (const file of localNewRow.invoices) {
+                    if (file instanceof File) {
+                        formData.append("invoices[]", file);
+                    }
+                }
+            }
+
+            const response = await axios.post(`/projects/${projectId}/shopping-items`, formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            setItems(prev => [...prev, response.data]);
+            setLocalNewRow(null);
+        } catch (error: any) {
+            if (error.response?.data?.errors?.name) {
+                setAddError(error.response.data.errors.name.join(", "));
+            }
+        }
+    };
+
+    const handleCancelNewRow = () => {
+        setLocalNewRow(null);
+        setAddError(null);
     };
 
     const handleRemoveItem = async (id: string) => {
         try {
             await axios.delete(`/shopping-items/${id}`);
             setItems(prev => prev.filter(item => item.id !== id));
-        } catch (error) {
-            console.error("Błąd podczas usuwania", error);
-        }
+        } catch (error) {}
     };
 
-    const handleFilterChange = (field: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [field]: value }));
-    };
-
-    const filteredItems = Array.isArray(items)
-    ? items.filter(item =>
-        item.name.toLowerCase().includes(filters.name.toLowerCase()) &&
-        item.notes.toLowerCase().includes(filters.notes.toLowerCase()) &&
-        item.link.toLowerCase().includes(filters.link.toLowerCase()) &&
-        (filters.status === "" || item.status === filters.status)
-    )
-    : [];
-
-
-    const totalNet = filteredItems.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
-    const totalGross = filteredItems.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
+    const totalNet = items.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
+    const totalGross = items.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
     const countsByStatus = {
-        dozamowienia: filteredItems.filter(i => i.status === "dozamowienia").length,
-        zamowione: filteredItems.filter(i => i.status === "zamowione").length,
-        dostarczone: filteredItems.filter(i => i.status === "dostarczone").length,
+        dozamowienia: items.filter(i => i.status === "dozamowienia").length,
+        zamowione: items.filter(i => i.status === "zamowione").length,
+        dostarczone: items.filter(i => i.status === "dostarczone").length,
     };
 
-    if (!project) return <div className="container mt-5">Nie znaleziono projektu.</div>;
+    const handleSaveEdit = async () => {
+        if (localNewRow) {
+            await handleSaveNewRow();
+        }
+        setEditMode(false);
+    };
+
+    if (!project || loading) {
+        return (
+            <>
+                <Navbar />
+                <div className="container mt-5 d-flex justify-content-center align-items-center" style={{ minHeight: "200px" }}>
+                    <WheelSpinner />
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
             <Navbar />
             <div className="container mt-5 pt-5">
-                <h5
+                <Link
+                    to={`/projectdetails/${projectId}/${encodeURIComponent(project.name)}`}
                     className="project-breadcrumb"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/projectdetails/${projectId}`)}
+                    style={{ cursor: "pointer", textDecoration: "none", color: "inherit" }}
                 >
                     ← {project.name} / {project.carId}
-                </h5>
+                </Link>
 
                 <div className="d-flex justify-content-between align-items-center mt-4">
                     <h2 className="shopping-title">Lista zakupów</h2>
-                    <button className="btn btn-custom" onClick={() => generateShoppingListPdf(project, filteredItems)}>
+                    <button className="btn btn-custom" onClick={() => generateShoppingListPdf(project, items)}>
                         📄 Pobierz PDF
                     </button>
                 </div>
@@ -150,7 +224,7 @@ const ShoppingList: React.FC = () => {
                         <div className="summary-text" style={{ paddingRight: "240px" }}>
                             <p><strong>Łączna kwota netto:</strong> {totalNet} zł</p>
                             <p><strong>Łączna kwota brutto:</strong> {totalGross} zł</p>
-                            <p><strong>Liczba pozycji:</strong> {filteredItems.length}</p>
+                            <p><strong>Liczba pozycji:</strong> {items.length}</p>
                             <p><strong>Statusy:</strong></p>
                             <ul>
                                 <li>Do zamówienia: {countsByStatus.dozamowienia}</li>
@@ -158,30 +232,44 @@ const ShoppingList: React.FC = () => {
                                 <li>Dostarczone: {countsByStatus.dostarczone}</li>
                             </ul>
                         </div>
-
-                        <img
-                            src="/shop.png"
-                            alt="Koszyk zakupowy"
-                            className="summary-image-absolute"
-                        />
+                        <img src="/shop.png" alt="Koszyk zakupowy" className="summary-image-absolute" />
                     </div>
                 )}
 
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div />
+                    {!editMode && (
+                        <button className="btn btn-custom" onClick={() => setEditMode(true)}>
+                            Edytuj listę zakupów
+                        </button>
+                    )}
+                </div>
+
                 <ShoppingListTable
-                    items={filteredItems}
-                    updateItem={handleUpdate}
+                    items={localNewRow ? [...items, { ...localNewRow, id: "local-new-row" }] : items}
+                    updateItem={(id, field, value) => {
+                        if (id === "local-new-row") {
+                            handleLocalNewRowChange(field as keyof LocalNewRow, value);
+                        } else {
+                            handleUpdate(id, field, value);
+                        }
+                    }}
                     editMode={editMode}
-                    removeItem={handleRemoveItem}
+                    removeItem={id => {
+                        if (id === "local-new-row") {
+                            handleCancelNewRow();
+                        } else {
+                            handleRemoveItem(id);
+                        }
+                    }}
+                    isLocalNewRow={id => id === "local-new-row"}
+                    onLoadInvoices={loadInvoicesForItem}
                 />
 
                 {editMode && (
                     <div className="d-flex justify-content-between mt-4">
-                        <button className="btn btn-custom" onClick={handleAddItem}>
-                            Dodaj
-                        </button>
-                        <button className="btn btn-custom" onClick={() => setEditMode(false)}>
-                            Zakończ edycję
-                        </button>
+                        <button className="btn btn-custom" onClick={handleAddEmptyRow}>Dodaj</button>
+                        <button className="btn btn-custom" onClick={handleSaveEdit}>Zapisz</button>
                     </div>
                 )}
             </div>

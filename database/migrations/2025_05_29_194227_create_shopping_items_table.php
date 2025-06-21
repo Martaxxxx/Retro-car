@@ -21,8 +21,9 @@ return new class extends Migration
             $table->enum('status', ['dozamowienia', 'zamowione', 'dostarczone'])->default('dozamowienia');
             $table->string('link')->nullable();
             $table->boolean('invoiceAttached')->default(false);
+            $table->json('invoices')->nullable(); // <-- TO DODAJ!
             $table->timestamps();
-    
+
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
         });
     }

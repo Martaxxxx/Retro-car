@@ -160,3 +160,17 @@
     .shopping-attachment-link:hover {
         text-decoration: underline;
     }
+    .link-bordo {
+        color: #9C2F3B !important;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        font-weight: 500;
+        transition: color 0.15s;
+    }
+    
+    
+    .link-bordo:hover,
+    .link-bordo:focus {
+        color: #7a1c2a !important; /* ciemniejsze bordo na hover */
+        text-decoration-thickness: 2px;
+    }

@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\ShoppingListController;
+use App\Http\Controllers\NotificationController;
 
 
 // 🏠 Widok SPA (Vue/React)
@@ -62,6 +63,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
 });
+
+Route::get('/notifications/{userId}', [NotificationController::class, 'index']);
+Route::post('/notifications/{userId}/mark-read', [NotificationController::class, 'markAllAsRead']);
 
 Route::get('/{any}', function () {
     return view('app');

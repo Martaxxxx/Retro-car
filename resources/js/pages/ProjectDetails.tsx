@@ -3,12 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { pl } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
-
+import WheelSpinner from "../components/WheelSpinner";
 import Navbar from "../components/Navbar";
 import { ProjectData } from "../pages/projectData";
 import { Part } from "../components/PartsTable";
 import { generateProjectDetails } from "../utils/generateProjectDetails";
 import axios from "../axios";
+
 
 registerLocale("pl", pl);
 
@@ -34,10 +35,14 @@ const ProjectDetails: React.FC = () => {
     const [newRole, setNewRole] = useState("");
     const [newName, setNewName] = useState("");
     const [timeLeft, setTimeLeft] = useState("");
+    const [loading, setLoading] = useState(true); // Dodane
+    const [error, setError] = useState<string | null>(null); // Dodane
 
     useEffect(() => {
         const fetchProject = async () => {
             try {
+                setLoading(true);
+                setError(null);
                 const res = await axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`);
                 const data = res.data;
                 setProject({
@@ -55,21 +60,20 @@ const ProjectDetails: React.FC = () => {
                     description: data.description || "",
                     parts: (data.parts || []).map((part: any) => ({
                         id: String(part.id),
-                        partCode: part.part_code, // <-- tylko to
+                        partCode: part.part_code,
                         name: part.name,
                         category: part.category,
                         notes: part.notes,
                         status: part.status,
                     })),
-                    
-                    
-                    
-                    
                 });
                 setSelectedStartDate(new Date(data.start_date));
                 setSelectedEndDate(new Date(data.end_date));
-            } catch (err) {
-                console.error("❌ Błąd ładowania projektu:", err);
+            } catch (err: any) {
+                setError("Nie udało się załadować projektu.");
+                setProject(null);
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -103,10 +107,10 @@ const ProjectDetails: React.FC = () => {
         setProject((prev) =>
             prev
                 ? {
-                    ...prev,
-                    startDate: selectedStartDate?.toISOString() || prev.startDate,
-                    endDate: selectedEndDate?.toISOString() || prev.endDate,
-                }
+                      ...prev,
+                      startDate: selectedStartDate?.toISOString() || prev.startDate,
+                      endDate: selectedEndDate?.toISOString() || prev.endDate,
+                  }
                 : null
         );
     };
@@ -125,9 +129,9 @@ const ProjectDetails: React.FC = () => {
         setProject((prev) =>
             prev
                 ? {
-                    ...prev,
-                    assignedTo: (prev.assignedTo ?? []).filter((u) => u !== user),
-                }
+                      ...prev,
+                      assignedTo: (prev.assignedTo ?? []).filter((u) => u !== user),
+                  }
                 : null
         );
     };
@@ -138,11 +142,11 @@ const ProjectDetails: React.FC = () => {
             setProject((prev) =>
                 prev
                     ? {
-                        ...prev,
-                        parts: prev.parts.map((p) =>
-                            p.id === partId ? { ...p, status: newStatus } : p
-                        ),
-                    }
+                          ...prev,
+                          parts: prev.parts.map((p) =>
+                              p.id === partId ? { ...p, status: newStatus } : p
+                          ),
+                      }
                     : null
             );
         } catch (error) {
@@ -160,15 +164,18 @@ const ProjectDetails: React.FC = () => {
             if (!part) return;
             const id = part.id;
 
-            if (typeof id === "string" && (id.startsWith("temp-") || id === "" || id.startsWith("p"))) {
+            if (
+                typeof id === "string" &&
+                (id.startsWith("temp-") || id === "" || id.startsWith("p"))
+            ) {
                 setProject((prev) =>
                     prev
                         ? {
-                            ...prev,
-                            parts: prev.parts.map((p) =>
-                                p.id === partId ? { ...p, [field]: value } : p
-                            ),
-                        }
+                              ...prev,
+                              parts: prev.parts.map((p) =>
+                                  p.id === partId ? { ...p, [field]: value } : p
+                              ),
+                          }
                         : null
                 );
             } else {
@@ -176,11 +183,11 @@ const ProjectDetails: React.FC = () => {
                 setProject((prev) =>
                     prev
                         ? {
-                            ...prev,
-                            parts: prev.parts.map((p) =>
-                                p.id === partId ? { ...p, [field]: value } : p
-                            ),
-                        }
+                              ...prev,
+                              parts: prev.parts.map((p) =>
+                                  p.id === partId ? { ...p, [field]: value } : p
+                              ),
+                          }
                         : null
                 );
             }
@@ -224,13 +231,13 @@ const ProjectDetails: React.FC = () => {
 
     const savePartsEdits = async () => {
         if (!project) return;
-    
+
         try {
             let updatedParts: Part[] = [];
-    
+
             for (const part of project.parts) {
                 const id = part.id;
-    
+
                 if (typeof id === "string" && id.startsWith("temp-")) {
                     if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
                         const response = await axios.post(`/projects/${project.id}/parts`, {
@@ -240,7 +247,7 @@ const ProjectDetails: React.FC = () => {
                             notes: part.notes,
                             status: part.status,
                         });
-    
+
                         updatedParts.push({
                             ...response.data,
                             partCode: response.data.partCode || response.data.part_code || part.partCode,
@@ -253,29 +260,30 @@ const ProjectDetails: React.FC = () => {
                         notes: part.notes,
                         status: part.status,
                     });
-    
+
                     updatedParts.push(part);
                 }
             }
-    
+
             setProject((prev) =>
                 prev
                     ? {
-                        ...prev,
-                        parts: updatedParts,
-                    }
+                          ...prev,
+                          parts: updatedParts,
+                      }
                     : null
             );
-    
+
             setEditPartsMode(false);
         } catch (err) {
             alert("Błąd zapisu części: " + err);
         }
     };
-    
 
-    if (!project) return <div className="container mt-5">Nie znaleziono projektu.</div>;
-
+    // === WAŻNE: Pokaż spinner, błąd lub brak projektu ===
+    if (loading) return <WheelSpinner />;
+    if (error) return <div className="container mt-5 text-danger">{error}</div>;
+    if (!project) return <div className="container mt-5">Brak projektu.</div>;
 
     return (
         <>
@@ -403,7 +411,6 @@ const ProjectDetails: React.FC = () => {
                             <button className="btn btn-outline-dark" onClick={() => setEditProjectMode(!editProjectMode)}>
                                 {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
                             </button>
-                           
                         </div>
                     </div>
 

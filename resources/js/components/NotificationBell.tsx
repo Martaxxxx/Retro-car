@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Bell } from "lucide-react";
 import styled from "styled-components";
+import axios from "../axios";
 
 const BellWrapper = styled.div`
   position: relative;
@@ -23,7 +24,7 @@ const Badge = styled.div`
 
 const Popup = styled.div`
   position: absolute;
-  top: 36px;  
+  top: 36px;
   right: -185px;
   width: 300px;
   background: white;
@@ -78,67 +79,95 @@ const MarkReadButton = styled.button`
   }
 `;
 
+type Notification = {
+  id: number;
+  text: string;
+  read: boolean;
+};
+
 const NotificationBell: React.FC = () => {
-    const [open, setOpen] = useState(false);
-    const [notifications, setNotifications] = useState([
-        { text: "Nowa część została dodana do projektu.", read: false },
-        { text: "Projekt Mercedes W123 został zaktualizowany.", read: false },
-        { text: "Masz 2 nowe komentarze.", read: false },
-    ]);
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const bellRef = useRef<HTMLDivElement>(null);
+  const userId = 1; // docelowo: z authContext
 
-    const bellRef = useRef<HTMLDivElement>(null);
-    const notificationSound = useRef<HTMLAudioElement | null>(null);
-
-   
-
-    // 🔒 Zamknięcie popupu po kliknięciu poza nim
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const markSingleAsRead = (index: number) => {
-        setNotifications(prev =>
-            prev.map((n, i) => (i === index ? { ...n, read: true } : n))
-        );
-    };
-
-    const markAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await axios.get(`/notifications/${userId}`);
+        const data = res.data?.notifications;
+        if (Array.isArray(data)) {
+          setNotifications(data);
+        } else {
+          setNotifications([]);
+        }
+      } catch (error) {
+        console.error("Błąd pobierania powiadomień:", error);
+        setNotifications([]);
+      }
     };
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    fetchNotifications();
+  }, [userId]);
 
-    return (
-        <BellWrapper ref={bellRef}>
-            <Bell size={24} style={{ cursor: "pointer" }} onClick={() => setOpen(!open)} />
-            {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
-            {open && (
-                <Popup>
-                    {notifications.map((note, i) => (
-                        <NotificationItem
-                            key={i}
-                            read={note.read}
-                            onClick={() => markSingleAsRead(i)}
-                        >
-                            {note.text}
-                        </NotificationItem>
-                    ))}
-                    {unreadCount > 0 && (
-                        <MarkReadButton onClick={markAllAsRead}>
-                            Oznacz wszystkie jako przeczytane
-                        </MarkReadButton>
-                    )}
-                </Popup>
-            )}
-        </BellWrapper>
+  const markSingleAsRead = (index: number) => {
+    setNotifications(prev =>
+      prev.map((n, i) => (i === index ? { ...n, read: true } : n))
     );
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.post(`/notifications/${userId}/mark-read`);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setOpen(false);
+    } catch (error) {
+      console.error("Błąd oznaczania jako przeczytane:", error);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <BellWrapper ref={bellRef}>
+      <Bell size={24} style={{ cursor: "pointer" }} onClick={() => setOpen(!open)} />
+      {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
+      {open && (
+        <Popup>
+          {notifications.length === 0 ? (
+            <p>Brak powiadomień.</p>
+          ) : (
+            <>
+              {notifications.map((note, i) => (
+                <NotificationItem
+                  key={note.id}
+                  read={note.read}
+                  onClick={() => markSingleAsRead(i)}
+                >
+                  {note.text}
+                </NotificationItem>
+              ))}
+              {unreadCount > 0 && (
+                <MarkReadButton onClick={markAllAsRead}>
+                  Oznacz wszystkie jako przeczytane
+                </MarkReadButton>
+              )}
+            </>
+          )}
+        </Popup>
+      )}
+    </BellWrapper>
+  );
 };
 
 export default NotificationBell;

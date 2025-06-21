@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { FaFilter, FaPaperclip } from "react-icons/fa";
-import FileExplorerModal from "./FileExplorerModal";
 import Select from "react-select";
-import NoteModal from "./NoteModal";
+// Lazy load modal components
+const FileExplorerModal = lazy(() => import("./FileExplorerModal"));
+const NoteModal = lazy(() => import("./NoteModal"));
 
 export interface ShoppingItem {
     id: string;
@@ -13,7 +14,7 @@ export interface ShoppingItem {
     status: "dozamowienia" | "zamowione" | "dostarczone";
     link: string;
     invoiceAttached: boolean;
-    invoices: File[];
+    invoices: File[] | { name: string; url: string; size?: number; type?: string }[];
 }
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
     updateItem: (id: string, field: keyof ShoppingItem, value: any) => void;
     removeItem: (id: string) => void;
     editMode: boolean;
+    isLocalNewRow?: (id: string) => boolean;
+    onLoadInvoices: (itemId: string) => Promise<void>;
 }
 
 const customSelectStyles = {
@@ -45,49 +48,110 @@ const statusOptions = [
     { value: "dostarczone", label: "Dostarczone" },
 ];
 
-const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, editMode }) => {
+const ShoppingListTable: React.FC<Props> = ({
+    items,
+    updateItem,
+    removeItem,
+    editMode,
+    isLocalNewRow,
+}) => {
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
-    const [filters, setFilters] = useState({ name: '', priceNet: '', priceGross: '', status: '' });
+    const [filters, setFilters] = useState({
+        name: "",
+        priceNet: "",
+        priceGross: "",
+        status: "",
+    });
     const [showFilters, setShowFilters] = useState(false);
     const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
 
+    // Pliki do modala: backend + lokalne
+    const getAllFilesForModal = (item: ShoppingItem) => [
+        ...(Array.isArray(item.invoices)
+            ? item.invoices.filter(
+                  (inv) => inv && typeof inv === "object" && "url" in inv
+              )
+            : []),
+        ...(Array.isArray(item.invoices)
+            ? item.invoices
+                  .filter((inv) => inv instanceof File)
+                  .map((f) => ({
+                      name: f.name,
+                      size: f.size,
+                      type: f.type,
+                      file: f,
+                  }))
+            : []),
+    ];
+
+    // Obsługa plików
     const handleFileChange = (id: string, files: FileList | null) => {
         if (!files) return;
         const newFiles = Array.from(files);
-        const current = items.find(i => i.id === id)?.invoices || [];
-        const updated = [...current, ...newFiles];
+        const current = (items.find((i) => i.id === id)?.invoices || []) as File[];
+        const updated = [
+            ...current,
+            ...newFiles.filter(
+                (nf) =>
+                    !current.some(
+                        (cf) => cf.name === nf.name && cf.size === nf.size
+                    )
+            ),
+        ];
         updateItem(id, "invoices", updated);
         updateItem(id, "invoiceAttached", updated.length > 0);
     };
 
     const handleRemoveFile = (id: string, index: number) => {
-        const item = items.find(i => i.id === id);
+        const item = items.find((i) => i.id === id);
         if (!item) return;
-        const updated = [...item.invoices];
+        const updated = Array.isArray(item.invoices) ? [...item.invoices] : [];
         updated.splice(index, 1);
         updateItem(id, "invoices", updated);
         updateItem(id, "invoiceAttached", updated.length > 0);
     };
 
-    const handleFilterChange = (field: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [field]: value }));
+    const handleFilterChange = (
+        field: keyof typeof filters,
+        value: string
+    ) => {
+        setFilters((prev) => ({ ...prev, [field]: value }));
     };
 
-    const filteredItems = items.filter(item => {
-        const nameMatch = item.name.toLowerCase().includes(filters.name.toLowerCase());
-        const netMatch = filters.priceNet === '' || item.priceNet.toString().includes(filters.priceNet);
-        const grossMatch = filters.priceGross === '' || item.priceGross.toString().includes(filters.priceGross);
-        const statusMatch = filters.status === '' || item.status === filters.status;
+    const filteredItems = items.filter((item) => {
+        const nameMatch = item.name
+            .toLowerCase()
+            .includes(filters.name.toLowerCase());
+        const netMatch =
+            filters.priceNet === "" ||
+            item.priceNet.toString().includes(filters.priceNet);
+        const grossMatch =
+            filters.priceGross === "" ||
+            item.priceGross.toString().includes(filters.priceGross);
+        const statusMatch =
+            filters.status === "" || item.status === filters.status;
         return nameMatch && netMatch && grossMatch && statusMatch;
     });
 
     return (
         <div>
             <div className="d-flex align-items-center mb-3 gap-2">
-                <span style={{ fontWeight: "bold", fontSize: "1.3rem", color: "#333" }}>Filtr</span>
+                <span
+                    style={{
+                        fontWeight: "bold",
+                        fontSize: "1.3rem",
+                        color: "#333",
+                    }}
+                >
+                    Filtr
+                </span>
                 <FaFilter
-                    style={{ cursor: "pointer", fontSize: "1.2rem", color: "#9C2F3B" }}
-                    onClick={() => setShowFilters(prev => !prev)}
+                    style={{
+                        cursor: "pointer",
+                        fontSize: "1.2rem",
+                        color: "#9C2F3B",
+                    }}
+                    onClick={() => setShowFilters((prev) => !prev)}
                 />
             </div>
 
@@ -110,7 +174,12 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
                                     <input
                                         className="form-control form-control-sm"
                                         value={filters.name}
-                                        onChange={(e) => handleFilterChange("name", e.target.value)}
+                                        onChange={(e) =>
+                                            handleFilterChange(
+                                                "name",
+                                                e.target.value
+                                            )
+                                        }
                                         placeholder="Filtr"
                                     />
                                 </th>
@@ -119,7 +188,12 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
                                     <input
                                         className="form-control form-control-sm"
                                         value={filters.priceNet}
-                                        onChange={(e) => handleFilterChange("priceNet", e.target.value)}
+                                        onChange={(e) =>
+                                            handleFilterChange(
+                                                "priceNet",
+                                                e.target.value
+                                            )
+                                        }
                                         placeholder="Filtr"
                                     />
                                 </th>
@@ -127,7 +201,12 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
                                     <input
                                         className="form-control form-control-sm"
                                         value={filters.priceGross}
-                                        onChange={(e) => handleFilterChange("priceGross", e.target.value)}
+                                        onChange={(e) =>
+                                            handleFilterChange(
+                                                "priceGross",
+                                                e.target.value
+                                            )
+                                        }
                                         placeholder="Filtr"
                                     />
                                 </th>
@@ -136,8 +215,16 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
                                         styles={customSelectStyles}
                                         options={statusOptions}
                                         isSearchable={false}
-                                        value={statusOptions.find(opt => opt.value === filters.status)}
-                                        onChange={(selected) => handleFilterChange("status", selected?.value || '')}
+                                        value={statusOptions.find(
+                                            (opt) =>
+                                                opt.value === filters.status
+                                        )}
+                                        onChange={(selected) =>
+                                            handleFilterChange(
+                                                "status",
+                                                selected?.value || ""
+                                            )
+                                        }
                                     />
                                 </th>
                                 <th></th>
@@ -147,79 +234,152 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
                         )}
                     </thead>
                     <tbody>
-                        {filteredItems.map(item => (
-                            <tr key={item.id}>
+                        {filteredItems.map((item) => (
+                            <tr
+                                key={item.id}
+                                style={
+                                    isLocalNewRow && isLocalNewRow(item.id)
+                                        ? { background: "#f8f8fa" }
+                                        : {}
+                                }
+                            >
                                 <td>
                                     {editMode ? (
                                         <input
                                             className="form-control form-control-sm"
-                                            value={item.name}
-                                            onChange={(e) => updateItem(item.id, "name", e.target.value)}
+                                            value={item.name ?? ""}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    item.id,
+                                                    "name",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder="Nazwa (wymagana)"
+                                            required
+                                            autoFocus={
+                                                isLocalNewRow &&
+                                                isLocalNewRow(item.id)
+                                            }
                                         />
-                                    ) : item.name}
+                                    ) : (
+                                        item.name
+                                    )}
                                 </td>
                                 <td>
                                     {editMode ? (
                                         <textarea
                                             className="form-control form-control-sm"
-                                            value={item.notes}
+                                            value={item.notes ?? ""}
                                             rows={2}
-                                            onChange={(e) => updateItem(item.id, "notes", e.target.value)}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    item.id,
+                                                    "notes",
+                                                    e.target.value
+                                                )
+                                            }
                                         />
-                                    ) : item.notes.length > 40 ? (
+                                    ) : item.notes && item.notes.length > 40 ? (
                                         <>
                                             {item.notes.substring(0, 40)}...
                                             <button
+                                                type="button"
                                                 className="btn btn-link btn-sm"
-                                                onClick={() => setNoteModalContent(item.notes)}
-                                                style={{ color: "#9C2F3B", fontSize: "0.7rem" }}
+                                                onClick={() =>
+                                                    setNoteModalContent(
+                                                        item.notes
+                                                    )
+                                                }
+                                                style={{
+                                                    color: "#9C2F3B",
+                                                    fontSize: "0.7rem",
+                                                }}
                                             >
                                                 Zobacz więcej
                                             </button>
                                         </>
-                                    ) : item.notes}
+                                    ) : (
+                                        item.notes || ""
+                                    )}
                                 </td>
                                 <td>
-                                    {editMode ? (
-                                        <input
-                                            type="number"
-                                            className="form-control form-control-sm"
-                                            value={item.priceNet}
-                                            onChange={(e) => updateItem(item.id, "priceNet", parseFloat(e.target.value))}
-                                        />
-                                    ) : `${item.priceNet.toFixed(2)} zł`}
-                                </td>
-                                <td>
-                                    {editMode ? (
-                                        <input
-                                            type="number"
-                                            className="form-control form-control-sm"
-                                            value={item.priceGross}
-                                            onChange={(e) => updateItem(item.id, "priceGross", parseFloat(e.target.value))}
-                                        />
-                                    ) : `${item.priceGross.toFixed(2)} zł`}
-                                </td>
+  {editMode ? (
+    <input
+      type="number"
+      className="form-control form-control-sm"
+      value={item.priceNet ?? ""}
+      onChange={(e) =>
+        updateItem(item.id, "priceNet", parseFloat(e.target.value))
+      }
+    />
+  ) : (
+    `${Number(item.priceNet).toFixed(2)} zł`
+  )}
+</td>
+<td>
+  {editMode ? (
+    <input
+      type="number"
+      className="form-control form-control-sm"
+      value={item.priceGross ?? ""}
+      onChange={(e) =>
+        updateItem(item.id, "priceGross", parseFloat(e.target.value))
+      }
+    />
+  ) : (
+    `${Number(item.priceGross).toFixed(2)} zł`
+  )}
+</td>
+
                                 <td>
                                     {editMode ? (
                                         <Select
                                             styles={customSelectStyles}
                                             options={statusOptions}
-                                            value={statusOptions.find(opt => opt.value === item.status)}
-                                            onChange={(selected) => updateItem(item.id, "status", selected?.value)}
+                                            value={statusOptions.find(
+                                                (opt) => opt.value === item.status
+                                            )}
+                                            onChange={(selected) =>
+                                                updateItem(
+                                                    item.id,
+                                                    "status",
+                                                    selected?.value
+                                                )
+                                            }
                                             isSearchable={false}
                                         />
-                                    ) : statusOptions.find(opt => opt.value === item.status)?.label}
+                                    ) : (
+                                        statusOptions.find(
+                                            (opt) => opt.value === item.status
+                                        )?.label
+                                    )}
                                 </td>
                                 <td>
                                     {editMode ? (
                                         <input
                                             className="form-control form-control-sm"
-                                            value={item.link}
-                                            onChange={(e) => updateItem(item.id, "link", e.target.value)}
+                                            value={item.link ?? ""}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    item.id,
+                                                    "link",
+                                                    e.target.value
+                                                )
+                                            }
                                         />
                                     ) : item.link ? (
-                                        <a href={item.link} target="_blank" rel="noopener noreferrer">Zobacz</a>
-                                    ) : "—"}
+                                        <a
+                                        href={item.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="link-bordo"
+                                      >
+                                        Zobacz
+                                      </a>
+                                    ) : (
+                                        "—"
+                                    )}
                                 </td>
                                 <td>
                                     {editMode ? (
@@ -227,37 +387,73 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
                                             type="file"
                                             multiple
                                             className="form-control form-control-sm"
-                                            onChange={(e) => handleFileChange(item.id, e.target.files)}
+                                            onChange={(e) =>
+                                                handleFileChange(
+                                                    item.id,
+                                                    e.target.files
+                                                )
+                                            }
                                         />
-                                    ) : item.invoices.length > 0 ? (
-                                        <button
-                                            className="btn btn-sm btn-link text-dark"
-                                            onClick={() => setActiveItemId(item.id)}
-                                        >
-                                            <FaPaperclip />
-                                        </button>
-                                    ) : "—"}
-                                    {activeItemId === item.id && (
-                                        <FileExplorerModal
-                                            files={item.invoices.map(f => ({
-                                                name: f.name,
-                                                size: f.size,
-                                                type: f.type,
-                                                file: f
-                                            }))}
-                                            onClose={() => setActiveItemId(null)}
-                                            onRemove={(i) => handleRemoveFile(item.id, i)}
-                                        />
+                                    ) : Array.isArray(item.invoices) &&
+                                      item.invoices.length > 0 ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-link text-dark"
+                                                onClick={() =>
+                                                    setActiveItemId(item.id)
+                                                }
+                                            >
+                                                <FaPaperclip />
+                                                {/* Możesz dodać liczbę plików: */}
+                                                <span style={{fontSize: "0.95em", marginLeft: 2}}>
+                                                    ({item.invoices.length})
+                                                </span>
+                                            </button>
+                                            {activeItemId === item.id && (
+                                                <Suspense fallback={<div>Ładowanie załączników...</div>}>
+                                                    <FileExplorerModal
+                                                        files={getAllFilesForModal(
+                                                            item
+                                                        )}
+                                                        onClose={() =>
+                                                            setActiveItemId(null)
+                                                        }
+                                                        onRemove={(i) =>
+                                                            handleRemoveFile(
+                                                                item.id,
+                                                                i
+                                                            )
+                                                        }
+                                                    />
+                                                </Suspense>
+                                            )}
+                                        </>
+                                    ) : (
+                                        "—"
                                     )}
                                 </td>
                                 {editMode && (
                                     <td>
                                         <button
+                                            type="button"
                                             className="icon-remove-btn"
                                             onClick={() => removeItem(item.id)}
-                                            title="Usuń"
+                                            title={
+                                                isLocalNewRow &&
+                                                isLocalNewRow(item.id)
+                                                    ? "Anuluj"
+                                                    : "Usuń"
+                                            }
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3" viewBox="0 0 16 16">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="16"
+                                                height="16"
+                                                fill="currentColor"
+                                                className="bi bi-trash3"
+                                                viewBox="0 0 16 16"
+                                            >
                                                 <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Z" />
                                             </svg>
                                         </button>
@@ -270,10 +466,12 @@ const ShoppingListTable: React.FC<Props> = ({ items, updateItem, removeItem, edi
             </div>
 
             {noteModalContent && (
-                <NoteModal
-                    content={noteModalContent}
-                    onClose={() => setNoteModalContent(null)}
-                />
+                <Suspense fallback={<div>Ładowanie notatki...</div>}>
+                    <NoteModal
+                        content={noteModalContent}
+                        onClose={() => setNoteModalContent(null)}
+                    />
+                </Suspense>
             )}
         </div>
     );

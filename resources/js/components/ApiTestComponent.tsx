@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './ApiTest.css'; 
+import React from 'react';
 
 interface TestData {
     id: number;
