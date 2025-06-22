@@ -4,195 +4,209 @@ import QRCodeModal from "./QRCodeModal";
 import Select from "react-select";
 import NoteModal from "./NoteModal";
 
-export interface Part {
-    id: string;
-    partCode: string;
-    name: string;
-    category: string;
-    notes: string;
-    status: "pending" | "ready" | "installed";
+declare global {
+  interface Window {
+    QRCode: any;
+  }
 }
 
-declare global {
-    interface Window {
-        QRCode: any;
-    }
+export const statusLabels: Record<string, string> = {
+  pending: "W przygotowaniu",
+  ready: "Gotowy do montażu",
+  installed: "Zamontowany",
+};
+
+export interface Part {
+  id: string;
+  partCode: string;
+  name: string;
+  category: string;
+  notes: string;
+  status: "pending" | "ready" | "installed";
 }
 
 interface Props {
-    parts: Part[];
-    updateStatus: (partId: string, newStatus: Part["status"]) => void;
-    updateField: (partId: string, field: keyof Omit<Part, "id" | "partCode">, value: string) => void;
-    addPart: (newPart: Part) => void;
-    removePart: (id: string) => void;
-    editMode: boolean;
-    projectName: string;
-    onEndEdit?: () => void;
-    onToggleEdit: () => void;
-    onGeneratePDF: () => void;
+  parts: Part[];
+  updateStatus: (partId: string, newStatus: Part["status"]) => void;
+  updateField: (
+    partId: string,
+    field: keyof Omit<Part, "id" | "partCode">,
+    value: string
+  ) => void;
+  addPart: (newPart: Part) => void;
+  removePart: (id: string) => void;
+  editMode: boolean;
+  projectName: string;
+  onEndEdit?: () => void;
+  onToggleEdit: () => void;
+  onGeneratePDF: () => void;
 }
 
 const customSelectStyles = {
-    control: (base) => ({
-        ...base,
-        backgroundColor: '#fff',
-        borderColor: '#9C2F3B',
-        boxShadow: 'none',
-        '&:hover': { borderColor: '#9C2F3B' }
-    }),
-    option: (base, state) => ({
-        ...base,
-        backgroundColor: state.isFocused ? '#9C2F3B' : '#fff',
-        color: state.isFocused ? '#fff' : '#000',
-        cursor: 'pointer'
-    })
+  control: (base) => ({
+    ...base,
+    backgroundColor: "#fff",
+    borderColor: "#9C2F3B",
+    boxShadow: "none",
+    "&:hover": { borderColor: "#9C2F3B" },
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
+    color: state.isFocused ? "#fff" : "#000",
+    cursor: "pointer",
+  }),
 };
 
 const PartsTable: React.FC<Props> = ({
-    parts,
-    updateStatus,
-    updateField,
-    addPart,
-    removePart,
-    editMode,
-    projectName,
-    onEndEdit,
-    onToggleEdit,
-    onGeneratePDF,
+  parts,
+  updateStatus,
+  updateField,
+  addPart,
+  removePart,
+  editMode,
+  projectName,
+  onEndEdit,
+  onToggleEdit,
+  onGeneratePDF,
 }) => {
-    const [isQRCodeReady, setQRCodeReady] = useState(false);
-    const [selectedQR, setSelectedQR] = useState<string | null>(null);
-    const [showFilters, setShowFilters] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [selectAll, setSelectAll] = useState(false);
-    const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
-    const tableRef = useRef<HTMLDivElement>(null);
-    const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
+  const [isQRCodeReady, setQRCodeReady] = useState(false);
+  const [selectedQR, setSelectedQR] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
 
-    const [filters, setFilters] = useState({
-        partCode: "",
-        name: "",
-        category: "",
-        notes: "",
-        status: "",
+  const [filters, setFilters] = useState({
+    partCode: "",
+    name: "",
+    category: "",
+    notes: "",
+    status: "",
+  });
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js";
+    script.async = true;
+    script.onload = () => setQRCodeReady(true);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const generateQRCode = (id: string, partCode: string, partName: string) => {
+    const element = document.getElementById(`qrcode-${id}`);
+    if (element && typeof window.QRCode === "function") {
+      element.innerHTML = "";
+      new window.QRCode(element, {
+        text: `${projectName}, ${partCode}, ${partName}`,
+        width: 100,
+        height: 100,
+      });
+    }
+  };
+
+  const handlePrintQRs = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const style = `
+      <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .part { margin-bottom: 30px; }
+        canvas { display: block; margin-bottom: 10px; }
+      </style>
+    `;
+    const htmlStart = `<html><head><title>Drukuj QR kody</title>${style}</head><body><h2>${projectName} - Kody QR</h2>`;
+    const htmlEnd = `<script>window.onload = () => setTimeout(() => window.print(), 500);</script></body></html>`;
+    const content = parts
+      .filter((part) => selectedIds.includes(part.id))
+      .map((part) => {
+        const canvas = document
+          .getElementById(`qrcode-${part.id}`)
+          ?.querySelector("canvas");
+        const dataUrl = canvas?.toDataURL() ?? "";
+        return `<div class="part"><img src="${dataUrl}" width="100" height="100" /><div><strong>${part.partCode}</strong> - ${part.name}</div></div>`;
+      })
+      .join("");
+
+    printWindow.document.write(htmlStart + content + htmlEnd);
+    printWindow.document.close();
+  };
+
+  useEffect(() => {
+    if (!isQRCodeReady || typeof window.QRCode !== "function") return;
+    const timeout = setTimeout(() => {
+      parts.forEach((part) => {
+        if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
+          generateQRCode(part.id, part.partCode, part.name);
+        }
+      });
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, [parts, isQRCodeReady]);
+
+  const handleFilterChange = (field: keyof typeof filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddPart = () => {
+    const brandLetter = projectName.charAt(0).toUpperCase() || "X";
+    const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
+    const nextNumber = String(parts.length + 1).padStart(3, "0");
+    const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
+
+    addPart({
+      id: `temp-${Date.now()}`,
+      partCode: newPartCode,
+      name: "",
+      category: "",
+      notes: "",
+      status: "pending",
     });
+  };
 
-    useEffect(() => {
-        const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js";
-        script.async = true;
-        script.onload = () => setQRCodeReady(true);
-        document.body.appendChild(script);
-        return () => {
-            document.body.removeChild(script);
-        };
-    }, []);
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredParts.map((part) => part.id));
+    }
+    setSelectAll(!selectAll);
+  };
 
-    const generateQRCode = (id: string, partCode: string, partName: string) => {
-        const element = document.getElementById(`qrcode-${id}`);
-        if (element && typeof window.QRCode === "function") {
-            element.innerHTML = "";
-            new window.QRCode(element, {
-                text: `${projectName}, ${partCode}, ${partName}`,
-                width: 100,
-                height: 100,
-            });
-        }
-    };
-
-    useEffect(() => {
-        if (!isQRCodeReady || typeof window.QRCode !== "function") return;
-    
-        const timeout = setTimeout(() => {
-            parts.forEach(part => {
-                if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
-                    generateQRCode(part.id, part.partCode, part.name);
-                }
-            });
-        }, 100); // małe opóźnienie by dać czas na DOM i QRCode.js
-    
-        return () => clearTimeout(timeout);
-    }, [parts, isQRCodeReady]);
-    
-    const handleFilterChange = (field: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleAddPart = () => {
-        const brandLetter = projectName.charAt(0).toUpperCase() || "X";
-        const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
-        const nextNumber = String(parts.length + 1).padStart(3, "0");
-        const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
-
-        addPart({
-            id: `temp-${Date.now()}`,
-            partCode: newPartCode,
-            name: "",
-            category: "",
-            notes: "",
-            status: "pending"
-        });
-    };
-
-    const toggleSelectAll = () => {
-        if (selectAll) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(filteredParts.map(part => part.id));
-        }
-        setSelectAll(!selectAll);
-    };
-
-    const toggleSelectOne = (id: string) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
-        );
-    };
-
-    const handlePrintQRs = () => {
-        const printWindow = window.open("", "_blank");
-        if (!printWindow) return;
-
-        const style = `
-            <style>
-                body { font-family: sans-serif; padding: 20px; }
-                .part { margin-bottom: 30px; }
-                canvas { display: block; margin-bottom: 10px; }
-            </style>
-        `;
-        const htmlStart = `<html><head><title>Drukuj QR kody</title>${style}</head><body><h2>${projectName} - Kody QR</h2>`;
-        const htmlEnd = `<script>window.onload = () => setTimeout(() => window.print(), 500);</script></body></html>`;
-        const content = parts
-            .filter(part => selectedIds.includes(part.id))
-            .map(part => {
-                const canvas = document.getElementById(`qrcode-${part.id}`)?.querySelector("canvas");
-                const dataUrl = canvas?.toDataURL() ?? "";
-                return `<div class="part"><img src="${dataUrl}" width="100" height="100" /><div><strong>${part.partCode}</strong> - ${part.name}</div></div>`;
-            }).join("");
-
-        printWindow.document.write(htmlStart + content + htmlEnd);
-        printWindow.document.close();
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (expandedNoteId && tableRef.current && !tableRef.current.contains(event.target as Node)) {
-                setExpandedNoteId(null);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [expandedNoteId]);
-
-    const filteredParts = parts.filter(part =>
-        (part.partCode ?? "").toLowerCase().includes(filters.partCode.toLowerCase()) &&
-        (part.name ?? "").toLowerCase().includes(filters.name.toLowerCase()) &&
-        (part.category ?? "").toLowerCase().includes(filters.category.toLowerCase()) &&
-        (part.notes ?? "").toLowerCase().includes(filters.notes.toLowerCase()) &&
-        (!filters.status || part.status === filters.status)
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
     );
+  };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        expandedNoteId &&
+        tableRef.current &&
+        !tableRef.current.contains(event.target as Node)
+      ) {
+        setExpandedNoteId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [expandedNoteId]);
+
+  const filteredParts = parts.filter(
+    (part) =>
+      (part.partCode ?? "").toLowerCase().includes(filters.partCode.toLowerCase()) &&
+      (part.name ?? "").toLowerCase().includes(filters.name.toLowerCase()) &&
+      (part.category ?? "").toLowerCase().includes(filters.category.toLowerCase()) &&
+      (part.notes ?? "").toLowerCase().includes(filters.notes.toLowerCase()) &&
+      (!filters.status || part.status === filters.status)
+  );
     return (
         <div ref={tableRef}>
             <div className="mt-5">
@@ -408,8 +422,14 @@ const PartsTable: React.FC<Props> = ({
                     <button className="btn btn-custom" onClick={handleAddPart}>
                         Dodaj wiersz
                     </button>
-                    <button className="btn btn-custom" onClick={onEndEdit}>
-                        Zapisz zmiany
+                    <button
+  className="btn btn-custom"
+  onClick={() => {
+    onEndEdit?.();
+    window.dispatchEvent(new Event("notifications:update"));
+  }}
+>
+  Zapisz zmiany
                     </button>
                 </div>
             )}

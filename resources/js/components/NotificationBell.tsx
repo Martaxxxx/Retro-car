@@ -3,9 +3,23 @@ import { Bell } from "lucide-react";
 import styled from "styled-components";
 import axios from "../axios";
 
+export const statusLabels: Record<string, string> = {
+  pending: "W przygotowaniu",
+  ready: "Gotowy do montażu",
+  installed: "Zamontowany",
+};
 const BellWrapper = styled.div`
   position: relative;
 `;
+
+const Avatar = styled.img`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+  object-fit: cover;
+`;
+
 
 const Badge = styled.div`
   position: absolute;
@@ -26,11 +40,13 @@ const Popup = styled.div`
   position: absolute;
   top: 36px;
   right: -185px;
-  width: 300px;
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
   background: white;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   border-radius: 12px;
-  padding: 25px;
+  padding: 20px;
   z-index: 100;
   animation: fadeIn 0.25s ease-out both;
 
@@ -46,11 +62,13 @@ const Popup = styled.div`
   }
 `;
 
-const NotificationItem = styled.div<{ read: boolean }>`
+const NotificationItem = styled.div.withConfig({
+  shouldForwardProp: (prop) => prop !== "isRead"
+})<{ isRead: boolean }>`
   padding: 8px 0;
   font-size: 14px;
-  color: ${({ read }) => (read ? "#aaa" : "#333")};
-  font-weight: ${({ read }) => (read ? "normal" : "bold")};
+  color: ${({ isRead }) => (isRead ? "#aaa" : "#333")};
+  font-weight: ${({ isRead }) => (isRead ? "normal" : "bold")};
   border-bottom: 1px solid #eee;
   cursor: pointer;
 
@@ -62,6 +80,7 @@ const NotificationItem = styled.div<{ read: boolean }>`
     background: #f9f9f9;
   }
 `;
+
 
 const MarkReadButton = styled.button`
   margin-top: 12px;
@@ -79,18 +98,75 @@ const MarkReadButton = styled.button`
   }
 `;
 
+const ShowMoreButton = styled.button`
+  margin-top: 8px;
+  background: transparent;
+  color: #333;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 type Notification = {
   id: number;
   text: string;
   read: boolean;
+  user?: {
+    name: string;
+    avatar?: string; 
+  };
 };
+
 
 const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [limit, setLimit] = useState(20);
   const bellRef = useRef<HTMLDivElement>(null);
-  const userId = 1; // docelowo: z authContext
+  const userId = 2; // ⬅️ Zmień to na dynamiczne ID z AuthContext, jeśli masz
 
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get(`/notifications/${userId}?limit=${limit}`);
+      const list = res.data?.notifications;
+      setNotifications(prev => {
+        const currentIds = prev.map(n => n.id).sort().join(',');
+        const newIds = list.map((n: Notification) => n.id).sort().join(',');
+        return currentIds === newIds ? prev : list;
+      });
+      
+    } catch (error) {
+      console.error("Błąd pobierania powiadomień:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [userId, limit]);
+
+  useEffect(() => {
+    fetchNotifications(); // Od razu po załadowaniu komponentu
+  
+    const interval = setInterval(fetchNotifications, 2000); // Co 2 sekundy
+    return () => clearInterval(interval);
+  }, []);
+  
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchNotifications(); // Odśwież listę powiadomień
+    };
+  
+    window.addEventListener("notifications:update", handleUpdate);
+  
+    return () => {
+      window.removeEventListener("notifications:update", handleUpdate);
+    };
+  }, []);
+  
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -101,46 +177,48 @@ const NotificationBell: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await axios.get(`/notifications/${userId}`);
-        const data = res.data?.notifications;
-        if (Array.isArray(data)) {
-          setNotifications(data);
-        } else {
-          setNotifications([]);
-        }
-      } catch (error) {
-        console.error("Błąd pobierania powiadomień:", error);
-        setNotifications([]);
-      }
-    };
-
-    fetchNotifications();
-  }, [userId]);
-
-  const markSingleAsRead = (index: number) => {
-    setNotifications(prev =>
-      prev.map((n, i) => (i === index ? { ...n, read: true } : n))
-    );
+  const markSingleAsRead = async (notificationId: number) => {
+    try {
+      await axios.post(`/notifications/${userId}/mark-single-read`, {
+        notification_id: notificationId,
+      });
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
+      
+    } catch (error) {
+      console.error("Błąd przy oznaczaniu powiadomienia jako przeczytane:", error);
+    }
   };
 
   const markAllAsRead = async () => {
     try {
       await axios.post(`/notifications/${userId}/mark-read`);
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await fetchNotifications(); // odśwież dane z backendu
       setOpen(false);
     } catch (error) {
       console.error("Błąd oznaczania jako przeczytane:", error);
     }
   };
+  
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <BellWrapper ref={bellRef}>
-      <Bell size={24} style={{ cursor: "pointer" }} onClick={() => setOpen(!open)} />
+      <Bell
+        size={24}
+        style={{ cursor: "pointer" }}
+        onClick={() =>
+          setOpen(prev => {
+            const next = !prev;
+            if (next) fetchNotifications();
+            return next;
+          })
+        }
+      />
       {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
       {open && (
         <Popup>
@@ -148,19 +226,36 @@ const NotificationBell: React.FC = () => {
             <p>Brak powiadomień.</p>
           ) : (
             <>
-              {notifications.map((note, i) => (
-                <NotificationItem
-                  key={note.id}
-                  read={note.read}
-                  onClick={() => markSingleAsRead(i)}
-                >
-                  {note.text}
-                </NotificationItem>
-              ))}
+             {notifications.map(note => (
+  <NotificationItem
+  key={note.id}
+  isRead={note.read}
+  onClick={() => markSingleAsRead(note.id)}
+>
+  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+    <img
+      src={note.user?.avatar || "/default-avatar.png"} // ← domyślny avatar, jeśli brak
+      alt="avatar"
+      style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
+    />
+    <div>
+      <strong style={{ marginRight: 6 }}>{note.user?.name ?? "Użytkownik"}:</strong>
+      {note.text}
+    </div>
+  </div>
+</NotificationItem>
+
+))}
+
               {unreadCount > 0 && (
                 <MarkReadButton onClick={markAllAsRead}>
                   Oznacz wszystkie jako przeczytane
                 </MarkReadButton>
+              )}
+              {notifications.length >= limit && unreadCount === 0 && (
+                <ShowMoreButton onClick={() => setLimit(prev => prev + 20)}>
+                  Pokaż więcej
+                </ShowMoreButton>
               )}
             </>
           )}
