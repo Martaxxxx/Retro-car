@@ -415,7 +415,7 @@ const ProjectDetails: React.FC = () => {
                     </div>
 
                     {/* Kalendarz */}
-                    <div className="calendar-wrapper order-md-3 order-2" style={{ marginLeft: "20px" }}>
+                    <div className="calendar-wrapper order-md-3 order-2" style={{ marginLeft: "4px" }}>
                         <div className="calendar-section">
                             <label className="label-date">Data Startu:</label>
                             <DatePicker

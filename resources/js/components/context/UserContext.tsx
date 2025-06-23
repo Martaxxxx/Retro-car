@@ -52,6 +52,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fetchUser();
         }
     }, []);
+    useEffect(() => {
+        const handleUserUpdated = () => {
+            const stored = localStorage.getItem("user");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                setUser(parsed);
+            }
+        };
+    
+        window.addEventListener("user:updated", handleUserUpdated);
+        return () => window.removeEventListener("user:updated", handleUserUpdated);
+    }, []);
+    
 
     return (
         <UserContext.Provider value={{ user, setUser, fetchUser, logout }}>

@@ -1,32 +1,44 @@
 import React, { useState, useEffect } from "react";
+import axios from "../axios";
 import Navbar from "../components/Navbar";
-import { useLoading } from "../components/context/LoadingContext";
+import WheelSpinner from "../components/WheelSpinner";
 
 const UserSettings: React.FC = () => {
-  const { setLoading } = useLoading();
+  const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<string>("/user.jpg");
   const [user, setUser] = useState<any>(null);
-  const [editedUser, setEditedUser] = useState<any>(null);
+  const [editedUser, setEditedUser] = useState({
+    name: "",
+    surname: "",
+    role: "",
+    email: "",
+    login: "",
+    avatar: "",
+    password: "",
+    current_password: "",
+    password_confirmation: "",
+  });
 
   useEffect(() => {
     const loadUser = async () => {
       setLoading(true);
       const stored = localStorage.getItem("user");
-      const userData = stored
-        ? JSON.parse(stored)
-        : {
-            name: "Arek",
-            surname: "Kowalski",
-            role: "admin",
-            email: "arek@firma.pl",
-            login: "arek_blacharz",
-            password: "********",
-            projects: ["Mercedes 300SL", "Mercedes Pagoda"],
-            avatar: "/user.jpg",
-          };
-      setUser(userData);
-      setEditedUser(userData);
-      setPreview(userData.avatar);
+
+      if (stored) {
+        const parsedUser = JSON.parse(stored);
+        setUser(parsedUser);
+        setEditedUser((prev) => ({
+          ...prev,
+          name: parsedUser.name || "",
+          surname: parsedUser.surname || "",
+          role: parsedUser.role || "",
+          email: parsedUser.email || "",
+          login: parsedUser.login || "",
+          avatar: parsedUser.avatar || "/user.jpg",
+        }));
+        setPreview(parsedUser.avatar || "/user.jpg");
+      }
+
       setLoading(false);
     };
 
@@ -39,7 +51,7 @@ const UserSettings: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        setEditedUser((prev: any) => ({ ...prev, avatar: result }));
+        setEditedUser((prev) => ({ ...prev, avatar: result }));
         setPreview(result);
       };
       reader.readAsDataURL(file);
@@ -47,21 +59,55 @@ const UserSettings: React.FC = () => {
   };
 
   const handleFieldChange = (field: string, value: string) => {
-    setEditedUser((prev: any) => ({ ...prev, [field]: value }));
+    setEditedUser((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    setUser(editedUser);
-    localStorage.setItem("user", JSON.stringify(editedUser));
-    window.dispatchEvent(new Event("user:updated")); // dla Navbaru i innych
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      const cleanData = Object.fromEntries(
+        Object.entries(editedUser).filter(
+          ([_, value]) => value !== "" && value !== null && value !== undefined
+        )
+      );
+
+      if (Object.keys(cleanData).length === 0) {
+        alert("Nie dokonano żadnych zmian.");
+        return;
+      }
+
+      const response = await axios.post("/user/settings", cleanData);
+      const updatedUser = response.data.user;
+
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event("user:updated"));
+
+      alert("Dane zapisane pomyślnie.");
+    } catch (error: any) {
+      console.error("Błąd zapisu danych użytkownika:", error);
+
+      if (error.response?.status === 422) {
+        const validationErrors = error.response.data.errors;
+        const message = Object.values(validationErrors).flat().join("\n");
+        alert("Błąd walidacji:\n" + message);
+      } else {
+        alert("Nie udało się zapisać zmian.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!user) return null;
+  if (!user || loading) return <WheelSpinner />;
 
   return (
     <>
       <Navbar />
-      <div className="container" style={{ marginTop: "200px" }}>
+      <div className="container" style={{ marginTop: "110px" }}>
         <div className="row">
           <div className="col-md-4 text-center">
             <img
@@ -87,7 +133,7 @@ const UserSettings: React.FC = () => {
                   <td>
                     <input
                       className="form-control"
-                      value={editedUser?.name}
+                      value={editedUser.name}
                       onChange={(e) => handleFieldChange("name", e.target.value)}
                     />
                   </td>
@@ -97,7 +143,7 @@ const UserSettings: React.FC = () => {
                   <td>
                     <input
                       className="form-control"
-                      value={editedUser?.surname}
+                      value={editedUser.surname}
                       onChange={(e) => handleFieldChange("surname", e.target.value)}
                     />
                   </td>
@@ -107,7 +153,7 @@ const UserSettings: React.FC = () => {
                   <td>
                     <input
                       className="form-control"
-                      value={editedUser?.login}
+                      value={editedUser.login}
                       onChange={(e) => handleFieldChange("login", e.target.value)}
                     />
                   </td>
@@ -115,11 +161,7 @@ const UserSettings: React.FC = () => {
                 <tr>
                   <th>Rola</th>
                   <td>
-                    <input
-                      className="form-control"
-                      value={editedUser?.role}
-                      disabled
-                    />
+                    <input className="form-control" value={editedUser.role} disabled />
                   </td>
                 </tr>
                 <tr>
@@ -127,19 +169,46 @@ const UserSettings: React.FC = () => {
                   <td>
                     <input
                       className="form-control"
-                      value={editedUser?.email}
+                      value={editedUser.email}
                       onChange={(e) => handleFieldChange("email", e.target.value)}
                     />
                   </td>
                 </tr>
                 <tr>
-                  <th>Hasło</th>
+                  <th>Obecne hasło</th>
                   <td>
                     <input
                       type="password"
                       className="form-control"
-                      value={editedUser?.password}
+                      value={editedUser.current_password}
+                      onChange={(e) => handleFieldChange("current_password", e.target.value)}
+                      placeholder="Wprowadź obecne hasło"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <th>Nowe hasło</th>
+                  <td>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={editedUser.password}
                       onChange={(e) => handleFieldChange("password", e.target.value)}
+                      placeholder="Wprowadź nowe hasło"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <th>Powtórz hasło</th>
+                  <td>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={editedUser.password_confirmation}
+                      onChange={(e) =>
+                        handleFieldChange("password_confirmation", e.target.value)
+                      }
+                      placeholder="Powtórz nowe hasło"
                     />
                   </td>
                 </tr>
@@ -148,7 +217,7 @@ const UserSettings: React.FC = () => {
 
             {user.role === "admin" ? (
               <button className="btn btn-custom mt-3" onClick={handleSave}>
-                💾 Zapisz zmiany
+                Zapisz zmiany
               </button>
             ) : (
               <button className="btn btn-secondary mt-3" disabled>

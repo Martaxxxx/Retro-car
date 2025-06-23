@@ -9,6 +9,7 @@ use App\Http\Controllers\RenovationController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\ShoppingListController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\UserSettingsController;
 
 // Widok SPA (React/Vite)
 Route::get('/', function () {
@@ -65,6 +66,10 @@ Route::middleware('api')->group(function () {
     Route::post('/notifications/{userId}/mark-read', [NotificationController::class, 'markAllAsRead']);
     Route::post('/notifications/{userId}/mark-single-read', [NotificationController::class, 'markSingleAsRead']);
 });
+
+
+
+Route::middleware('auth')->post('/user/settings', [UserSettingsController::class, 'update']);
 
 
 Route::get('/{any}', function () {
