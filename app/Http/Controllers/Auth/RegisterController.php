@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -19,14 +20,14 @@ class RegisterController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'in:user,admin', // lub bez tego, jeśli tylko "user"
+            'role' => 'required|string|in:admin,manager,user,purchaser',
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'] ?? 'user',
+            'role' => $validated['role'],
         ]);
 
         return response()->json(['message' => 'Użytkownik zarejestrowany', 'user' => $user], 201);

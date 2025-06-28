@@ -11,6 +11,7 @@ import UserSettings from "./pages/UserSettings";
 import ManagerPanel from "./pages/ManagerPanel";
 import Reports from "./pages/Reports";
 import Register from "./pages/Register";
+import AdminPanel from "./pages/AdminPanel"; // ⬅️ NOWY IMPORT
 
 const App: React.FC = () => {
     return (
@@ -20,16 +21,14 @@ const App: React.FC = () => {
             <Route path="/logowanie" element={<Login />} />
             <Route path="/renowacje" element={<Renovations />} />
             <Route path="/projectdetails/:projectName" element={<ProjectDetails />} />
-
             <Route path="/projectdetails/:projectId/lista_zakupow" element={<ShoppingList />} />
             <Route path="/ustawienia" element={<UserSettings />} />
             <Route path="/zarządzanie" element={<ManagerPanel />} />
             <Route path="/raporty" element={<Reports />} />
             <Route path="/rejestracja" element={<Register />} />
+            <Route path="/adminpanel" element={<AdminPanel />} /> {/* ⬅️ NOWA TRASA */}
         </Routes>
     );
 };
 
 export default App;
-
-

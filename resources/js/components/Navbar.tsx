@@ -6,7 +6,6 @@ import NotificationBell from "./NotificationBell";
 import { useUser } from "../components/context/UserContext";
 
 // ====== Styled Components ======
-
 const NavbarContainer = styled.div`
   width: 100%;
   height: 72px;
@@ -257,7 +256,10 @@ export const Navbar = () => {
         <StyledRouterLink to="/renowacje" onClick={() => setIsOpen(false)}>Renowacje</StyledRouterLink>
         <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
         {user?.roles?.includes("admin") && (
-          <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
+          <>
+            <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
+            <StyledRouterLink to="/adminpanel" onClick={() => setIsOpen(false)}>Admin</StyledRouterLink>
+          </>
         )}
       </NavLinks>
 
