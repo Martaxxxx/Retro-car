@@ -40,7 +40,9 @@ const AdminPanel: React.FC = () => {
         try {
             const res = await axios.get("/api/users");
             setUsers(res.data);
-        } catch {}
+        } catch (err) {
+            console.error("Błąd pobierania użytkowników:", err);
+        }
     };
 
     const openEditModal = (user: User) => {
@@ -66,12 +68,12 @@ const AdminPanel: React.FC = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files?.[0]) {
-            setFormData(prev => ({ ...prev, avatar: e.target.files![0] }));
+            setFormData((prev) => ({ ...prev, avatar: e.target.files![0] }));
         }
     };
 
@@ -85,34 +87,55 @@ const AdminPanel: React.FC = () => {
         return data;
     };
 
-    const handleUpdate = async () => {
-        if (!editingUser) return;
-        try {
-            const data = buildFormData();
-            await axios.post(`/api/users/${editingUser.id}?_method=PUT`, data, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            setEditingUser(null);
-            fetchUsers();
-        } catch {
-            alert("Błąd zapisu zmian");
-        }
-    };
-
     const handleCreate = async () => {
         try {
             const data = buildFormData();
-            await axios.post("/api/users", data, {
-                headers: { "Content-Type": "multipart/form-data" }
+
+
+
+            const response = await axios.post("/api/users", data, {
+                headers: { "Content-Type": "multipart/form-data" },
             });
+
+
             setEditingUser(null);
             fetchUsers();
-        } catch {
+        } catch (err: any) {
+            console.error("❌ Błąd tworzenia użytkownika:", err.response?.data || err.message);
             alert("Błąd tworzenia użytkownika");
         }
     };
 
-    const filteredUsers = users.filter(user => {
+    const handleUpdate = async () => {
+        if (!editingUser) return;
+        try {
+            const data = buildFormData();
+
+            const response = await axios.post(`/api/users/${editingUser.id}?_method=PUT`, data, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+
+            setEditingUser(null);
+            fetchUsers();
+        } catch (err: any) {
+            console.error("❌ Błąd zapisu zmian:", err.response?.data || err.message);
+            alert("Błąd zapisu zmian");
+        }
+    };
+
+    const handleDelete = async (userId: number) => {
+        if (!window.confirm("Czy na pewno chcesz usunąć tego użytkownika?")) return;
+        try {
+            await axios.delete(`/users/${userId}`);
+            setUsers((prev) => prev.filter((u) => u.id !== userId));
+        } catch (err: any) {
+            console.error("❌ Błąd usuwania użytkownika:", err.response?.data || err.message);
+            alert("Błąd usuwania użytkownika");
+        }
+    };
+
+    const filteredUsers = users.filter((user) => {
         const term = searchTerm.toLowerCase();
         return (
             (!filterRole || user.role === filterRole) &&
@@ -141,14 +164,14 @@ const AdminPanel: React.FC = () => {
                             className="form-control"
                             placeholder="Szukaj (ID, imię, email, rola...)"
                             value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <div className="col-md-4">
                         <select
                             className="form-select"
                             value={filterRole}
-                            onChange={e => setFilterRole(e.target.value)}
+                            onChange={(e) => setFilterRole(e.target.value)}
                         >
                             <option value="">Wszystkie role</option>
                             <option value="admin">Admin</option>
@@ -173,14 +196,19 @@ const AdminPanel: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsers.map(user => (
+                            {filteredUsers.map((user) => (
                                 <tr key={user.id}>
                                     <td>{user.id}</td>
                                     <td>
                                         <img
                                             src={user.avatar || "/default-avatar.png"}
                                             alt="avatar"
-                                            style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }}
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: "50%",
+                                                objectFit: "cover",
+                                            }}
                                         />
                                     </td>
                                     <td>{user.name}</td>
@@ -188,8 +216,17 @@ const AdminPanel: React.FC = () => {
                                     <td>{user.role}</td>
                                     <td>{new Date(user.created_at).toLocaleDateString()}</td>
                                     <td>
-                                        <button className="btn btn-sm btn-primary" onClick={() => openEditModal(user)}>
+                                        <button
+                                            className="btn btn-sm btn-primary"
+                                            onClick={() => openEditModal(user)}
+                                        >
                                             Edytuj
+                                        </button>
+                                        <button
+                                            className="btn btn-sm btn-danger ms-2"
+                                            onClick={() => handleDelete(user.id)}
+                                        >
+                                            Usuń
                                         </button>
                                     </td>
                                 </tr>
@@ -204,8 +241,14 @@ const AdminPanel: React.FC = () => {
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h5 className="modal-title">{isCreating ? "Dodaj użytkownika" : "Edytuj użytkownika"}</h5>
-                                <button type="button" className="btn-close" onClick={() => setEditingUser(null)}></button>
+                                <h5 className="modal-title">
+                                    {isCreating ? "Dodaj użytkownika" : "Edytuj użytkownika"}
+                                </h5>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    onClick={() => setEditingUser(null)}
+                                ></button>
                             </div>
                             <div className="modal-body">
                                 <input
@@ -251,8 +294,16 @@ const AdminPanel: React.FC = () => {
                                 />
                             </div>
                             <div className="modal-footer d-flex justify-content-between">
-                                <button className="btn btn-secondary w-50 me-2" onClick={() => setEditingUser(null)}>Anuluj</button>
-                                <button className="btn btn-primary w-50" onClick={isCreating ? handleCreate : handleUpdate}>
+                                <button
+                                    className="btn btn-secondary w-50 me-2"
+                                    onClick={() => setEditingUser(null)}
+                                >
+                                    Anuluj
+                                </button>
+                                <button
+                                    className="btn btn-primary w-50"
+                                    onClick={isCreating ? handleCreate : handleUpdate}
+                                >
                                     Zapisz
                                 </button>
                             </div>
