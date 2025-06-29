@@ -22,24 +22,26 @@ const UserSettings: React.FC = () => {
   useEffect(() => {
     const loadUser = async () => {
       setLoading(true);
-      const stored = localStorage.getItem("user");
+      try {
+        const response = await axios.get("/api/user");
+        const parsedUser = response.data;
 
-      if (stored) {
-        const parsedUser = JSON.parse(stored);
         setUser(parsedUser);
         setEditedUser((prev) => ({
           ...prev,
           name: parsedUser.name || "",
           surname: parsedUser.surname || "",
-          role: parsedUser.role || "",
+          role: parsedUser.roles?.[0] || "", // użycie pierwszej roli
           email: parsedUser.email || "",
           login: parsedUser.login || "",
           avatar: parsedUser.avatar || "/user.jpg",
         }));
         setPreview(parsedUser.avatar || "/user.jpg");
+      } catch (error) {
+        console.error("Błąd ładowania użytkownika:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     loadUser();
@@ -83,9 +85,7 @@ const UserSettings: React.FC = () => {
       const updatedUser = response.data.user;
 
       setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
       window.dispatchEvent(new Event("user:updated"));
-
       alert("Dane zapisane pomyślnie.");
     } catch (error: any) {
       console.error("Błąd zapisu danych użytkownika:", error);
@@ -215,7 +215,7 @@ const UserSettings: React.FC = () => {
               </tbody>
             </table>
 
-            {user.role === "admin" ? (
+            {user.roles?.includes("admin") ? (
               <button className="btn btn-custom mt-3" onClick={handleSave}>
                 Zapisz zmiany
               </button>
