@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProjectController;
@@ -10,16 +11,18 @@ use App\Http\Controllers\PartController;
 use App\Http\Controllers\ShoppingListController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserSettingsController;
+use App\Http\Controllers\UserController;
+use App\Http\Middleware\IsAdmin;
 
-// Widok SPA (React/Vite)
+//  Widok SPA (React)
 Route::get('/', function () {
     return view('app');
 });
 
-// Logowanie
+//  Logowanie
 Route::post('/api/login', [AuthController::class, 'login']);
 
-// Dane zalogowanego użytkownika
+//  Dane zalogowanego użytkownika (zawsze jako tablica ról)
 Route::middleware(['web', 'auth'])->get('/api/user', function (Request $request) {
     $user = $request->user();
 
@@ -27,17 +30,25 @@ Route::middleware(['web', 'auth'])->get('/api/user', function (Request $request)
         'id' => $user->id,
         'name' => $user->name,
         'email' => $user->email,
-        'roles' => [$user->role], // zawsze jako tablica
+        'roles' => [$user->role],
         'avatar' => $user->avatar ?? null,
         'created_at' => $user->created_at,
         'updated_at' => $user->updated_at,
     ]);
 });
 
-// Rejestracja (tylko dla adminów)
-Route::middleware(['auth', 'is_admin'])->post('/register', [RegisterController::class, 'register']);
+//  Panel administracyjny – tylko admin
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/api/users', [UserController::class, 'index']);
+    Route::put('/api/users/{id}', [UserController::class, 'update']);
+    Route::post('/api/users', [UserController::class, 'store']);
+    Route::post('/register', [RegisterController::class, 'register']);
+});
 
-// Projekty (z auth)
+//  Panel użytkownika – dla każdego zalogowanego
+Route::middleware(['auth'])->post('/user/settings', [UserSettingsController::class, 'update']);
+
+//  Projekty – dostęp tylko po zalogowaniu
 Route::middleware(['auth'])->group(function () {
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::post('/projects', [ProjectController::class, 'store']);
@@ -48,30 +59,27 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
 });
 
-// Renowacje – publiczne
-Route::get('/renovations', [RenovationController::class, 'index']);
-
-// Szczegóły projektu (np. z kliknięcia w slajder)
-Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
-
-// Części – dostęp bez auth
+//  Części – brak auth
 Route::get('/projects/{project}/parts', [PartController::class, 'index']);
 Route::post('/projects/{project}/parts', [PartController::class, 'store']);
 Route::put('/parts/{part}', [PartController::class, 'update']);
 Route::delete('/parts/{part}', [PartController::class, 'destroy']);
 
-//  Powiadomienia 
+//  Powiadomienia – API
 Route::middleware('api')->group(function () {
     Route::get('/notifications/{userId}', [NotificationController::class, 'index']);
     Route::post('/notifications/{userId}/mark-read', [NotificationController::class, 'markAllAsRead']);
     Route::post('/notifications/{userId}/mark-single-read', [NotificationController::class, 'markSingleAsRead']);
 });
 
+//  Renowacje – publiczne
+Route::get('/renovations', [RenovationController::class, 'index']);
 
+//  Szczegóły projektu
+Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
+Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']); // dla slajdera
 
-Route::middleware('auth')->post('/user/settings', [UserSettingsController::class, 'update']);
-
-
+// SPA fallback – React (wszystko inne)
 Route::get('/{any}', function () {
     return view('app');
 })->where('any', '.*');

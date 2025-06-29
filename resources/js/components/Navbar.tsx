@@ -5,7 +5,7 @@ import { NavLink as RouterLink, useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
 import { useUser } from "../components/context/UserContext";
 
-// ====== Styled Components ======
+// ========== Styled Components ==========
 
 const NavbarContainer = styled.div`
   width: 100%;
@@ -46,7 +46,6 @@ const NavLinks = styled.div<{ $isOpen: boolean }>`
     display: ${({ $isOpen }) => ($isOpen ? "flex" : "none")};
   }
 `;
-
 
 const StyledRouterLink = styled(RouterLink)`
   font-size: 16px;
@@ -166,14 +165,14 @@ const LoginButton = styled.button`
     display: none;
   }
 `;
+
 const Hamburger = styled.div`
   display: none;
   cursor: pointer;
 
   @media (max-width: 1024px) {
     display: block;
-    margin-left: 16px;  // << Zapewnia przesunięcie do prawej strony
-    margin-right: 4px; // << Opcjonalnie, trochę odstępu od krawędzi
+    margin-left: 16px;
   }
 `;
 
@@ -191,8 +190,6 @@ const UserGreeting = styled.div`
   border-radius: 999px;
   margin-right: 10px;
   cursor: pointer;
-  height: 40px;
-  line-height: 1;
 
   img {
     width: 32px;
@@ -209,7 +206,7 @@ const DropdownMenu = styled.div`
   background: white;
   border: 1px solid #ccc;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   padding: 10px;
   min-width: 160px;
   z-index: 100;
@@ -237,11 +234,9 @@ const RightSection = styled.div`
   }
 `;
 
-
-// ====== Navbar Component ======
+// ========== Component ==========
 
 export const Navbar = () => {
-
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -257,6 +252,7 @@ export const Navbar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   useEffect(() => {
     const handleUserUpdate = () => {
       const stored = localStorage.getItem("user");
@@ -267,88 +263,85 @@ export const Navbar = () => {
         }
       }
     };
-  
+
     window.addEventListener("user:updated", handleUserUpdate);
     return () => window.removeEventListener("user:updated", handleUserUpdate);
   }, []);
-  
+
   return (
-    
     <NavbarContainer>
-  <Logo src="/retro2.png" alt="Logo" />
+      <Logo src="/retro2.png" alt="Logo" />
 
-  <NavLinks $isOpen={isOpen}>
-    <StyledRouterLink to="/" end onClick={() => setIsOpen(false)}>Strona główna</StyledRouterLink>
-    <StyledRouterLink to="/renowacje" onClick={() => setIsOpen(false)}>Renowacje</StyledRouterLink>
-    <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
-    {user?.roles?.includes("admin") && (
-  <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>
-    Zarządzanie
-  </StyledRouterLink>
-)}
-  </NavLinks>
+      <NavLinks $isOpen={isOpen}>
+        <StyledRouterLink to="/" end onClick={() => setIsOpen(false)}>Strona główna</StyledRouterLink>
+        <StyledRouterLink to="/renowacje" onClick={() => setIsOpen(false)}>Renowacje</StyledRouterLink>
+        <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
+        {user?.roles?.includes("admin") && (
+          <>
+            <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
+            <StyledRouterLink to="/adminpanel" onClick={() => setIsOpen(false)}>Admin</StyledRouterLink>
+          </>
+        )}
+      </NavLinks>
 
-  <SearchInputWrapper>
-    <Search size={18} color="white" />
-    <SearchField placeholder="Szukaj..." />
-  </SearchInputWrapper>
+      <SearchInputWrapper>
+        <Search size={18} color="white" />
+        <SearchField placeholder="Szukaj..." />
+      </SearchInputWrapper>
 
-  <IconsContainer>
-    <IconWrapper><NotificationBell /></IconWrapper>
-    <IconWrapper onClick={() => navigate("/ustawienia")}><Settings size={26} /></IconWrapper>
-  </IconsContainer>
+      <IconsContainer>
+        <IconWrapper><NotificationBell /></IconWrapper>
+        <IconWrapper onClick={() => navigate("/ustawienia")}><Settings size={26} /></IconWrapper>
+      </IconsContainer>
 
-  <RightSection>
-    {user ? (
-      <>
-        <div style={{ position: "relative" }} ref={dropdownRef}>
-          <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
-            <img src={user.avatar || "/default-avatar.png"} alt="avatar" />
-            Witaj, {user.name}
-          </UserGreeting>
-          {showDropdown && (
-            <DropdownMenu>
-              <DropdownItem
-                onClick={logout}
-                style={{
-                  border: "2px solid #9C2F3B",
-                  color: "#9C2F3B",
-                  backgroundColor: "white",
-                  borderRadius: "24px",
-                  padding: "8px 14px",
-                  fontWeight: "bold",
-                  display: "flex",
-                  gap: "14px",
-                  cursor: "pointer",
-                }}
-              >
-                <LogOut size={18} /> Wyloguj
-              </DropdownItem>
-            </DropdownMenu>
-          )}
-        </div>
+      <RightSection>
+        {user ? (
+          <>
+            <div style={{ position: "relative" }} ref={dropdownRef}>
+              <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
+                <img src={user.avatar || "/default-avatar.png"} alt="avatar" />
+                Witaj, {user.name}
+              </UserGreeting>
+              {showDropdown && (
+                <DropdownMenu>
+                  <DropdownItem
+                    onClick={logout}
+                    style={{
+                      border: "2px solid #9C2F3B",
+                      color: "#9C2F3B",
+                      backgroundColor: "white",
+                      borderRadius: "24px",
+                      padding: "8px 14px",
+                      fontWeight: "bold",
+                      display: "flex",
+                      gap: "14px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <LogOut size={18} /> Wyloguj
+                  </DropdownItem>
+                </DropdownMenu>
+              )}
+            </div>
 
-        <Hamburger onClick={() => setIsOpen(!isOpen)}>
-          <Menu size={24} />
-        </Hamburger>
-      </>
-    ) : (
-      <>
-        <LoginButton onClick={() => navigate("/login")}>
-          <User size={18} />
-          Zaloguj się
-        </LoginButton>
+            <Hamburger onClick={() => setIsOpen(!isOpen)}>
+              <Menu size={24} />
+            </Hamburger>
+          </>
+        ) : (
+          <>
+            <LoginButton onClick={() => navigate("/login")}>
+              <User size={18} />
+              Zaloguj się
+            </LoginButton>
 
-        <Hamburger onClick={() => setIsOpen(!isOpen)}>
-          <Menu size={24} />
-        </Hamburger>
-      </>
-    )}
-  </RightSection>
-</NavbarContainer>
-
-  
-
+            <Hamburger onClick={() => setIsOpen(!isOpen)}>
+              <Menu size={24} />
+            </Hamburger>
+          </>
+        )}
+      </RightSection>
+    </NavbarContainer>
   );
 };
 
