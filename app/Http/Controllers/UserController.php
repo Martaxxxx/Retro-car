@@ -12,7 +12,7 @@ class UserController extends Controller
     public function index()
     {
         try {
-            $users = User::select('id', 'name', 'surname', 'email', 'login', 'role', 'avatar', 'created_at')->get();
+            $users = User::select('id', 'name', 'email', 'role', 'avatar', 'created_at')->get();
             return response()->json($users);
         } catch (\Exception $e) {
             return response()->json([
@@ -26,28 +26,24 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'surname' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'login' => 'nullable|string|max:255|unique:users,login',
             'role' => 'required|string|in:admin,manager,user,purchaser',
             'password' => 'required|string|min:6',
             'avatar' => 'nullable|image|max:2048',
         ]);
 
-        $avatarPath = null;
+        $user = new User();
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+        $user->password = Hash::make($validated['password']);
+
         if ($request->hasFile('avatar')) {
-            $avatarPath = '/storage/' . $request->file('avatar')->store('avatars', 'public');
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = '/storage/' . $path;
         }
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'surname' => $request->input('surname'),
-            'email' => $validated['email'],
-            'login' => $request->input('login'),
-            'role' => $validated['role'],
-            'password' => Hash::make($validated['password']),
-            'avatar' => $avatarPath,
-        ]);
+        $user->save();
 
         return response()->json(['message' => 'Użytkownik utworzony', 'user' => $user], 201);
     }
@@ -58,18 +54,14 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'surname' => 'nullable|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'login' => ['nullable', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role' => 'required|string|in:admin,manager,user,purchaser',
             'avatar' => 'nullable|image|max:2048',
             'password' => 'nullable|string|min:6',
         ]);
 
         $user->name = $validated['name'];
-        $user->surname = $request->input('surname');
         $user->email = $validated['email'];
-        $user->login = $request->input('login');
         $user->role = $validated['role'];
 
         if ($request->hasFile('avatar')) {
@@ -84,5 +76,20 @@ class UserController extends Controller
         $user->save();
 
         return response()->json(['message' => 'Użytkownik zaktualizowany']);
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            $user->delete();
+
+            return response()->json(['message' => 'Użytkownik usunięty']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Błąd usuwania użytkownika',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

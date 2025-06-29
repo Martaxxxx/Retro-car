@@ -14,6 +14,9 @@ use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\IsAdmin;
 
+
+
+
 //  Widok SPA (React)
 Route::get('/', function () {
     return view('app');
@@ -83,3 +86,7 @@ Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']); 
 Route::get('/{any}', function () {
     return view('app');
 })->where('any', '.*');
+
+// usuwanie w adminpanel
+
+Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');

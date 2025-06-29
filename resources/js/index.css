@@ -269,3 +269,45 @@ button.btn-secondary {
     .custom-input:hover {
         border-color: #7c1f2c;
     }
+    .icon-edit-btn {
+        background: none;
+        border: none;
+        color: #0b0b0b; 
+        padding: 4px 8px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.15s;
+        vertical-align: middle;
+        line-height: 1;
+        box-shadow: none;
+    }
+    .icon-edit-btn:hover {
+        color: #0b0b0b; 
+    }
+
+    .icon-remove-btn svg.bi,
+    svg.bi {
+        fill: #9C2F3B !important;
+    }
+    .icon-remove-btn:hover svg.bi,
+    .icon-remove-btn:hover svg.bi-trash,
+    .icon-remove-btn:hover svg.bi-trash3 {
+        fill: #7b1e2b !important;
+    }
+
+    .icon-actions {
+        display: flex;
+        align-items: center;     /* wyśrodkuj pionowo w komórce */
+        justify-content: center; /* wyśrodkuj poziomo */
+        gap: 16px;               /* odstęp między ikonami, zmień np. na 12px */
+        height: 100%;            /* żeby flex działał na całą wysokość komórki */
+      }
+      .icon-actions button {
+        background: none;
+        border: none;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      

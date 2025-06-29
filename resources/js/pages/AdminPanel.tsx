@@ -153,7 +153,7 @@ const AdminPanel: React.FC = () => {
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <h2>Użytkownicy</h2>
                     <button className="btn btn-dark rounded-pill px-4" onClick={openCreateModal}>
-                        ➕ Dodaj użytkownika
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Dodaj użytkownika
                     </button>
                 </div>
 
@@ -183,8 +183,8 @@ const AdminPanel: React.FC = () => {
                 </div>
 
                 <div className="table-responsive">
-                    <table className="table table-bordered table-striped align-middle rounded shadow overflow-hidden">
-                        <thead className="table-dark">
+                <table className="table table-bordered table-striped text-center align-middle rounded shadow overflow-hidden m-0">
+                    <thead className="table-dark">
                             <tr>
                                 <th>ID</th>
                                 <th>Avatar</th>
@@ -215,20 +215,39 @@ const AdminPanel: React.FC = () => {
                                     <td>{user.email}</td>
                                     <td>{user.role}</td>
                                     <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                                    <td>
-                                        <button
-                                            className="btn btn-sm btn-primary"
-                                            onClick={() => openEditModal(user)}
-                                        >
-                                            Edytuj
-                                        </button>
-                                        <button
-                                            className="btn btn-sm btn-danger ms-2"
-                                            onClick={() => handleDelete(user.id)}
-                                        >
-                                            Usuń
-                                        </button>
-                                    </td>
+                                 <td>
+                                 
+  <div className="icon-actions">
+    <button
+      className="icon-edit-btn"
+      onClick={() => openEditModal(user)}
+      title="Edytuj"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        className="lucide lucide-user-round-pen-icon lucide-user-round-pen"
+      >
+        <path d="M2 21a8 8 0 0 1 10.821-7.487"/>
+        <path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>
+        <circle cx="10" cy="8" r="5"/>
+      </svg>
+    </button>
+    <button
+      className="icon-remove-btn"
+      onClick={() => handleDelete(user.id)}
+      title="Usuń"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#9C2F3B"
+        className="bi bi-trash3"
+        viewBox="0 0 16 16"
+      >
+        <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
+      </svg>
+    </button>
+  </div>
+</td>
+
+                                  
                                 </tr>
                             ))}
                         </tbody>
