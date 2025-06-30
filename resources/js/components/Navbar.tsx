@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
-import { Search, Bell, Settings, User, Menu, LogOut } from "lucide-react";
+import { Search, Settings, User, Menu, LogOut } from "lucide-react";
 import { NavLink as RouterLink, useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
 import { useUser } from "../components/context/UserContext";
-
-// ========== Styled Components ==========
 
 const NavbarContainer = styled.div`
   width: 100%;
@@ -234,14 +232,12 @@ const RightSection = styled.div`
   }
 `;
 
-// ========== Component ==========
-
 export const Navbar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const { user, setUser, logout } = useUser();
+  const { user, logout } = useUser();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -251,21 +247,6 @@ export const Navbar = () => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const handleUserUpdate = () => {
-      const stored = localStorage.getItem("user");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.name || parsed?.avatar) {
-          setUser(parsed);
-        }
-      }
-    };
-
-    window.addEventListener("user:updated", handleUserUpdate);
-    return () => window.removeEventListener("user:updated", handleUserUpdate);
   }, []);
 
   return (
@@ -299,7 +280,7 @@ export const Navbar = () => {
           <>
             <div style={{ position: "relative" }} ref={dropdownRef}>
               <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
-                <img src={user.avatar || "/default-avatar.png"} alt="avatar" />
+                <img src={user.avatar || "/user.jpg"} alt="avatar" />
                 Witaj, {user.name}
               </UserGreeting>
               {showDropdown && (

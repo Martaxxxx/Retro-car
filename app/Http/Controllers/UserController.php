@@ -39,7 +39,7 @@ class UserController extends Controller
         $user->password = Hash::make($validated['password']);
 
         if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
+            $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
         }
 
@@ -65,7 +65,7 @@ class UserController extends Controller
         $user->role = $validated['role'];
 
         if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
+            $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
         }
 

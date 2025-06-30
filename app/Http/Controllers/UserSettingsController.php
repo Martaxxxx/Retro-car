@@ -8,23 +8,24 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSettingsController extends Controller
 {
-    
     public function update(Request $request)
     {
         $user = Auth::user();
 
         $request->validate([
-            'avatar' => 'nullable|string',
+            'avatar' => 'nullable|file|image|max:2048', // max 2MB
             'name' => 'nullable|string|max:255',
             'surname' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
-            'login' => 'nullable|string|max:255|unique:users,login,' . $user->id, 
+            'login' => 'nullable|string|max:255|unique:users,login,' . $user->id,
             'current_password' => 'required_with:password|string',
-            'password' => 'nullable|string|min:6|confirmed', 
+            'password' => 'nullable|string|min:6|confirmed',
         ]);
 
-        if ($request->filled('avatar')) {
-            $user->avatar = $request->avatar;
+        // 📸 Obsługa avatara (jeśli przesłano plik)
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('uploads/avatars', 'public');
+            $user->avatar = '/storage/' . $path;
         }
 
         if ($request->filled('name')) {
@@ -47,7 +48,6 @@ class UserSettingsController extends Controller
             if (!Hash::check($request->current_password, $user->password)) {
                 return response()->json(['error' => 'Bieżące hasło jest nieprawidłowe.'], 403);
             }
-
             $user->password = bcrypt($request->password);
         }
 

@@ -2,22 +2,24 @@ import React, { useState, useEffect } from "react";
 import axios from "../axios";
 import Navbar from "../components/Navbar";
 import WheelSpinner from "../components/WheelSpinner";
+import { useUser } from "../components/context/UserContext";
 
 const UserSettings: React.FC = () => {
+  const { setUser } = useUser();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<string>("/user.jpg");
-  const [user, setUser] = useState<any>(null);
+  const [user, setUserLocal] = useState<any>(null);
   const [editedUser, setEditedUser] = useState({
     name: "",
     surname: "",
     role: "",
     email: "",
     login: "",
-    avatar: "",
     password: "",
     current_password: "",
     password_confirmation: "",
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -25,16 +27,14 @@ const UserSettings: React.FC = () => {
       try {
         const response = await axios.get("/api/user");
         const parsedUser = response.data;
-
-        setUser(parsedUser);
+        setUserLocal(parsedUser);
         setEditedUser((prev) => ({
           ...prev,
           name: parsedUser.name || "",
           surname: parsedUser.surname || "",
-          role: parsedUser.roles?.[0] || "", // użycie pierwszej roli
+          role: parsedUser.roles?.[0] || "",
           email: parsedUser.email || "",
           login: parsedUser.login || "",
-          avatar: parsedUser.avatar || "/user.jpg",
         }));
         setPreview(parsedUser.avatar || "/user.jpg");
       } catch (error) {
@@ -43,20 +43,14 @@ const UserSettings: React.FC = () => {
         setLoading(false);
       }
     };
-
     loadUser();
   }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setEditedUser((prev) => ({ ...prev, avatar: result }));
-        setPreview(result);
-      };
-      reader.readAsDataURL(file);
+      setAvatarFile(file);
+      setPreview(URL.createObjectURL(file));
     }
   };
 
@@ -66,30 +60,38 @@ const UserSettings: React.FC = () => {
 
   const handleSave = async () => {
     if (!user) return;
-
     try {
       setLoading(true);
-
-      const cleanData = Object.fromEntries(
-        Object.entries(editedUser).filter(
-          ([_, value]) => value !== "" && value !== null && value !== undefined
-        )
-      );
-
-      if (Object.keys(cleanData).length === 0) {
-        alert("Nie dokonano żadnych zmian.");
-        return;
+      const formData = new FormData();
+      Object.entries(editedUser).forEach(([key, value]) => {
+        if (value) formData.append(key, value);
+      });
+      if (avatarFile) {
+        formData.append("avatar", avatarFile);
       }
 
-      const response = await axios.post("/user/settings", cleanData);
-      const updatedUser = response.data.user;
+      const response = await axios.post("/user/settings", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      setUser(updatedUser);
+      const updatedUser = response.data.user;
+      setUserLocal(updatedUser);
+
+      const formattedUser = {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar || "/user.jpg",
+        roles: updatedUser.role ? [updatedUser.role] : updatedUser.roles || ["user"],
+      };
+
+      setUser(formattedUser);
+      localStorage.setItem("user", JSON.stringify(formattedUser));
       window.dispatchEvent(new Event("user:updated"));
+
       alert("Dane zapisane pomyślnie.");
     } catch (error: any) {
       console.error("Błąd zapisu danych użytkownika:", error);
-
       if (error.response?.status === 422) {
         const validationErrors = error.response.data.errors;
         const message = Object.values(validationErrors).flat().join("\n");
@@ -124,7 +126,6 @@ const UserSettings: React.FC = () => {
               onChange={handleImageChange}
             />
           </div>
-
           <div className="col-md-8">
             <table className="custom-table w-100">
               <tbody>
@@ -205,16 +206,13 @@ const UserSettings: React.FC = () => {
                       type="password"
                       className="form-control"
                       value={editedUser.password_confirmation}
-                      onChange={(e) =>
-                        handleFieldChange("password_confirmation", e.target.value)
-                      }
+                      onChange={(e) => handleFieldChange("password_confirmation", e.target.value)}
                       placeholder="Powtórz nowe hasło"
                     />
                   </td>
                 </tr>
               </tbody>
             </table>
-
             {user.roles?.includes("admin") ? (
               <button className="btn btn-custom mt-3" onClick={handleSave}>
                 Zapisz zmiany
