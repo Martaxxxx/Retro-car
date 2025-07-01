@@ -41,7 +41,7 @@ class ProjectController extends Controller
         // 📸 Obsługa pliku obrazu
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('uploads', 'public');
+            $path = $request->file('image')->store('uploads/projects', 'public');
             $imagePath = '/storage/' . $path;
         }
 
