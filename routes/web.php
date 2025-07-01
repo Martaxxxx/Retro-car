@@ -14,9 +14,6 @@ use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\IsAdmin;
 
-
-
-
 //  Widok SPA (React)
 Route::get('/', function () {
     return view('app');
@@ -60,6 +57,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
     Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
+
+    // ✅ Nowa trasa do usuwania jednego załącznika (pliku) z itemu:
+    Route::delete('/shopping-items/invoice', [ShoppingListController::class, 'deleteInvoice']);
 });
 
 //  Części – brak auth
@@ -82,11 +82,17 @@ Route::get('/renovations', [RenovationController::class, 'index']);
 Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
 Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']); // dla slajdera
 
+use Illuminate\Support\Facades\DB;
+
+// ✅ Najpierw trasa diagnostyczna – inaczej React ją przechwyci
+Route::get('/check-db-path', function () {
+    return DB::connection()->getDatabaseName();
+});
+
 // SPA fallback – React (wszystko inne)
 Route::get('/{any}', function () {
     return view('app');
 })->where('any', '.*');
 
 // usuwanie w adminpanel
-
 Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');

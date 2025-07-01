@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Project;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ProjectController extends Controller
 {
@@ -38,17 +39,10 @@ class ProjectController extends Controller
             ], 422);
         }
 
-        // 📸 Obsługa pliku obrazu
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('uploads/projects', 'public');
-            $imagePath = '/storage/' . $path;
-        }
-
-        // 🧱 Tworzenie nowego projektu
+        // 🧱 Tworzenie projektu bez zdjęcia (tymczasowo)
         $project = Project::create([
             'name' => $request->name,
-            'image' => $imagePath,
+            'image' => null,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'status' => $request->status,
@@ -58,33 +52,38 @@ class ProjectController extends Controller
             'car_id' => $request->car_id,
         ]);
 
+        // 📸 Obsługa pliku obrazu – zapisz jako main.jpg w folderze projektu
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->storeAs("uploads/projects/project_{$project->id}", 'main.jpg', 'public');
+            $project->image = "/storage/{$path}";
+            $project->save();
+        }
+
         return response()->json([
             'message' => 'Projekt został zapisany.',
             'project' => $project,
         ], 201);
     }
 
- // 🔍 Pokazuje projekt po ID i nazwie
-public function showByIdAndName($id, $name)
-{
-    $decodedName = urldecode($name); // ← ważne!
-    \Log::info("🔍 Szukanie projektu ID [$id] z nazwą [$decodedName]");
+    // 🔍 Pokazuje projekt po ID i nazwie
+    public function showByIdAndName($id, $name)
+    {
+        $decodedName = urldecode($name); // ← ważne!
+        \Log::info("🔍 Szukanie projektu ID [$id] z nazwą [$decodedName]");
 
-    $project = Project::where('id', $id)
-        ->whereRaw('LOWER(name) = ?', [strtolower($decodedName)])
-        ->first();
+        $project = Project::where('id', $id)
+            ->whereRaw('LOWER(name) = ?', [strtolower($decodedName)])
+            ->first();
 
-    if (!$project) {
-        return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
+        if (!$project) {
+            return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
+        }
+
+        // Tu możesz pobrać przypisanych użytkowników, części itd.
+        $project->assignedTo = ['Blacharz_Arek', 'Lakiernik_Kasia'];
+        $project->parts = $project->parts()->get(); // ← relacja w modelu
+        $project->description = 'Tutaj będzie opis projektu';
+
+        return response()->json($project);
     }
-
-    // Tu możesz pobrać przypisanych użytkowników, części itd.
-    $project->assignedTo = ['Blacharz_Arek', 'Lakiernik_Kasia'];
-    $project->parts = $project->parts()->get(); // ← relacja w modelu
-    $project->description = 'Tutaj będzie opis projektu';
-
-    return response()->json($project);
-}
-
-
 }

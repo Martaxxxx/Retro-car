@@ -3,17 +3,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\ShoppingItem;
 
 class ShoppingListController extends Controller
 {
-    // Pobierz listę zakupów dla danego projektu (z poprawnym zwracaniem załączników)
     public function index($projectId)
     {
-        // Jeśli masz w modelu $casts ['invoices' => 'array'], poniższe działa automatycznie
         $items = ShoppingItem::where('project_id', $projectId)->get();
 
-        // Możesz jawnie upewnić się, że 'invoices' są zawsze tablicą:
         foreach ($items as $item) {
             if (!is_array($item->invoices)) {
                 $item->invoices = [];
@@ -23,7 +21,6 @@ class ShoppingListController extends Controller
         return response()->json($items);
     }
 
-    // Dodaj pozycję do listy zakupów dla projektu (z obsługą uploadu plików)
     public function store(Request $request, $projectId)
     {
         $data = $request->validate([
@@ -32,40 +29,36 @@ class ShoppingListController extends Controller
             'priceNet' => 'required|numeric',
             'priceGross' => 'required|numeric',
             'status' => 'required|in:dozamowienia,zamowione,dostarczone',
-            'link' => 'nullable|url',
+            'link' => 'nullable|string|max:255',
         ]);
 
         $data['project_id'] = $projectId;
         $data['invoiceAttached'] = false;
-
-        // Obsługa uploadu plików
-        $attachments = [];
-        if ($request->hasFile('invoices')) {
-            foreach ($request->file('invoices') as $file) {
-                $path = $file->store('invoices', 'public');
-                $attachments[] = [
-                    'name' => $file->getClientOriginalName(),
-                    'url' => asset('storage/' . $path),
-                ];
-            }
-            $data['invoiceAttached'] = count($attachments) > 0;
-        }
-        $data['invoices'] = $attachments;
+        $data['invoices'] = [];
 
         $item = ShoppingItem::create($data);
 
-        // Upewnij się, że pole invoices jest arrayem w odpowiedzi
-        if (!is_array($item->invoices)) {
-            $item->invoices = [];
+        $attachments = [];
+        if ($request->hasFile('invoices')) {
+            foreach ($request->file('invoices') as $file) {
+                $path = $file->store("uploads/projects/project_{$projectId}/shoppinglist", 'public');
+                $attachments[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'url' => "/storage/{$path}",
+                ];
+            }
+            $item->invoices = $attachments;
+            $item->invoiceAttached = count($attachments) > 0;
+            $item->save();
         }
 
         return response()->json($item, 201);
     }
 
-    // Edytuj pozycję na liście zakupów (z obsługą uploadu plików)
     public function update(Request $request, $id)
     {
         $item = ShoppingItem::findOrFail($id);
+        $projectId = $item->project_id;
 
         $data = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -75,38 +68,63 @@ class ShoppingListController extends Controller
             'status' => 'sometimes|required|in:dozamowienia,zamowione,dostarczone',
             'link' => 'nullable|url',
             'invoiceAttached' => 'nullable|boolean',
-            // invoices NIE walidujemy jako array, bo mogą być pliki (multipart)
         ]);
 
-        // Obsługa uploadu plików
         $attachments = $item->invoices ?: [];
+
         if ($request->hasFile('invoices')) {
             foreach ($request->file('invoices') as $file) {
-                $path = $file->store('invoices', 'public');
+                $path = $file->store("uploads/projects/project_{$projectId}/shoppinglist", 'public');
                 $attachments[] = [
                     'name' => $file->getClientOriginalName(),
-                    'url' => asset('storage/' . $path),
+                    'url' => "/storage/{$path}",
                 ];
             }
-            $data['invoiceAttached'] = count($attachments) > 0;
         }
+
         $data['invoices'] = $attachments;
+        $data['invoiceAttached'] = count($attachments) > 0;
 
         $item->update($data);
-
-        // Upewnij się, że pole invoices jest arrayem w odpowiedzi
-        if (!is_array($item->invoices)) {
-            $item->invoices = [];
-        }
 
         return response()->json($item);
     }
 
-    // Usuń pozycję z listy zakupów
     public function destroy($id)
     {
         $item = ShoppingItem::findOrFail($id);
+        $projectId = $item->project_id;
+
+        // Usuń wszystkie pliki z folderu uploads/projects/project_{id}/shoppinglist
+        Storage::disk('public')->deleteDirectory("uploads/projects/project_{$projectId}/shoppinglist");
+
         $item->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteInvoice(Request $request)
+    {
+        $validated = $request->validate([
+            'itemId' => 'required|integer|exists:shopping_items,id',
+            'index' => 'required|integer|min:0',
+        ]);
+
+        $item = ShoppingItem::findOrFail($validated['itemId']);
+        $invoices = $item->invoices ?? [];
+
+        if (!isset($invoices[$validated['index']])) {
+            return response()->json(['error' => 'Załącznik nie istnieje'], 404);
+        }
+
+        $relativePath = str_replace('/storage/', '', $invoices[$validated['index']]['url']);
+        Storage::disk('public')->delete($relativePath);
+
+        array_splice($invoices, $validated['index'], 1);
+
+        $item->invoices = $invoices;
+        $item->invoiceAttached = count($invoices) > 0;
+        $item->save();
 
         return response()->json(['success' => true]);
     }
