@@ -3,8 +3,8 @@ import "../styles/FileExplorerModal.css";
 
 // POZWÓL na dwa typy plików: backend (url) i frontend (file)
 export type FileData =
-    | { name: string; size?: number; type?: string; url: string } // backend, z url
-    | { name: string; size: number; type: string; file: File };   // frontend, z file
+  | { name: string; size?: number; type?: string; url: string; id?: number } // backend
+  | { name: string; size: number; type: string; file: File };                // frontend
 
 interface Props {
     files: FileData[];

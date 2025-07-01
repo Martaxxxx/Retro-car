@@ -9,19 +9,12 @@ import { ProjectData } from "../pages/projectData";
 import { Part } from "../components/PartsTable";
 import { generateProjectDetails } from "../utils/generateProjectDetails";
 import axios from "../axios";
-
+import type { FileData } from "../components/FileExplorerModal";
 
 registerLocale("pl", pl);
 
 const PartsTable = lazy(() => import("../components/PartsTable"));
 const FileExplorerModal = lazy(() => import("../components/FileExplorerModal"));
-
-interface FileData {
-    name: string;
-    size: number;
-    type: string;
-    file: File;
-}
 
 const ProjectDetails: React.FC = () => {
     const { projectId, name } = useParams<{ projectId: string; name: string }>();
@@ -31,12 +24,13 @@ const ProjectDetails: React.FC = () => {
     const [editProjectMode, setEditProjectMode] = useState(false);
     const [editPartsMode, setEditPartsMode] = useState(false);
     const [files, setFiles] = useState<FileData[]>([]);
+    const [backendFiles, setBackendFiles] = useState<FileData[]>([]);
     const [showFileModal, setShowFileModal] = useState(false);
     const [newRole, setNewRole] = useState("");
     const [newName, setNewName] = useState("");
     const [timeLeft, setTimeLeft] = useState("");
-    const [loading, setLoading] = useState(true); // Dodane
-    const [error, setError] = useState<string | null>(null); // Dodane
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -69,6 +63,7 @@ const ProjectDetails: React.FC = () => {
                 });
                 setSelectedStartDate(new Date(data.start_date));
                 setSelectedEndDate(new Date(data.end_date));
+                fetchFiles(data.id);
             } catch (err: any) {
                 setError("Nie udało się załadować projektu.");
                 setProject(null);
@@ -81,6 +76,41 @@ const ProjectDetails: React.FC = () => {
             fetchProject();
         }
     }, [projectId, name]);
+
+    const fetchFiles = async (projId: string | number) => {
+        try {
+            const res = await axios.get(`/projects/${projId}/files`);
+            setBackendFiles(res.data);
+        } catch (e) {
+            console.error("Błąd pobierania plików:", e);
+        }
+    };
+
+    const uploadFiles = async () => {
+        if (!files.length || !project) return;
+        const formData = new FormData();
+        files.forEach((f) => {
+         if ("file" in f) formData.append("files[]", f.file);
+        });
+
+
+        try {
+            await axios.post(`/projects/${project.id}/files`, formData);
+            setFiles([]);
+            fetchFiles(project.id);
+        } catch (e) {
+            alert("Błąd wysyłania plików");
+        }
+    };
+
+    const deleteFile = async (id: number) => {
+        try {
+            await axios.delete(`/projects/files/${id}`);
+            fetchFiles(project?.id ?? "");
+        } catch (e) {
+            alert("Błąd usuwania pliku");
+        }
+    };
 
     useEffect(() => {
         if (project) {
@@ -99,129 +129,16 @@ const ProjectDetails: React.FC = () => {
         }
     }, [project]);
 
-    const handleInputChange = (field: keyof ProjectData, value: string) => {
-        setProject((prev) => (prev ? { ...prev, [field]: value } : null));
-    };
-
-    const saveProjectDates = () => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      startDate: selectedStartDate?.toISOString() || prev.startDate,
-                      endDate: selectedEndDate?.toISOString() || prev.endDate,
-                  }
-                : null
-        );
-    };
-
-    const addUser = () => {
-        if (!newRole || !newName) return;
-        const newUser = `${newRole}_${newName}`;
-        setProject((prev) =>
-            prev ? { ...prev, assignedTo: [...(prev.assignedTo || []), newUser] } : null
-        );
-        setNewRole("");
-        setNewName("");
-    };
-
-    const removeUser = (user: string) => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      assignedTo: (prev.assignedTo ?? []).filter((u) => u !== user),
-                  }
-                : null
-        );
-    };
-
-    const updateStatus = async (partId: string, newStatus: Part["status"]) => {
-        try {
-            await axios.put(`/parts/${partId}`, { status: newStatus });
-            setProject((prev) =>
-                prev
-                    ? {
-                          ...prev,
-                          parts: prev.parts.map((p) =>
-                              p.id === partId ? { ...p, status: newStatus } : p
-                          ),
-                      }
-                    : null
-            );
-        } catch (error) {
-            console.error("Błąd podczas aktualizacji statusu części:", error);
-        }
-    };
-
-    const updateField = async (
-        partId: string,
-        field: keyof Omit<Part, "id" | "partCode">,
-        value: string
-    ) => {
-        try {
-            const part = project?.parts.find((p) => p.id === partId);
-            if (!part) return;
-            const id = part.id;
-
-            if (
-                typeof id === "string" &&
-                (id.startsWith("temp-") || id === "" || id.startsWith("p"))
-            ) {
-                setProject((prev) =>
-                    prev
-                        ? {
-                              ...prev,
-                              parts: prev.parts.map((p) =>
-                                  p.id === partId ? { ...p, [field]: value } : p
-                              ),
-                          }
-                        : null
-                );
-            } else {
-                await axios.put(`/parts/${partId}`, { [field]: value });
-                setProject((prev) =>
-                    prev
-                        ? {
-                              ...prev,
-                              parts: prev.parts.map((p) =>
-                                  p.id === partId ? { ...p, [field]: value } : p
-                              ),
-                          }
-                        : null
-                );
-            }
-        } catch (error) {
-            console.error("Błąd aktualizacji pola części:", error);
-        }
-    };
-
-    const addPart = (newPart: Part) => {
-        setProject((prev) =>
-            prev ? { ...prev, parts: [...prev.parts, newPart] } : null
-        );
-    };
-
-    const removePart = async (id: string) => {
-        try {
-            await axios.delete(`/parts/${id}`);
-            setProject((prev) =>
-                prev ? { ...prev, parts: prev.parts.filter((p) => p.id !== id) } : null
-            );
-        } catch (error) {
-            console.error("Błąd usuwania części:", error);
-        }
-    };
-
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const uploaded = e.target.files;
         if (!uploaded) return;
-        const newFiles: FileData[] = Array.from(uploaded).map((file) => ({
+        const newFiles = Array.from(uploaded).map((file) => ({
             name: file.name,
-            size: file.size,
-            type: file.type,
-            file: file,
-        }));
+        size: file.size,
+        type: file.type,
+        file: file,
+        } as FileData));
+
         setFiles((prev) => [...prev, ...newFiles]);
     };
 
@@ -290,15 +207,14 @@ const ProjectDetails: React.FC = () => {
             <Navbar />
             <div className="container mt-5 pt-5">
                 <div className="row">
-                    {/* Zdjęcie */}
                     <div className="col-md-4 order-md-1">
                         <img
                             src={
-                                project.image?.startsWith("/storage/")
+                                project?.image?.startsWith("/storage/")
                                     ? project.image
-                                    : `/storage/${project.image}`
+                                    : `/storage/${project?.image}`
                             }
-                            alt={`Zdjęcie: ${project.name}`}
+                            alt={`Zdjęcie: ${project?.name}`}
                             className="img-fluid rounded mb-3"
                             onError={(e) => {
                                 e.currentTarget.src = "/default-avatar.png";
@@ -306,169 +222,38 @@ const ProjectDetails: React.FC = () => {
                         />
                     </div>
 
-                    {/* Dane projektu */}
-                    <div style={{ flex: "1 1 40%", maxWidth: "40%", minWidth: "280px" }} className="order-md-2 order-3">
-                        {editProjectMode ? (
-                            <>
-                                {["name", "status", "brand", "model", "year", "carId"].map((field) => (
-                                    <input
-                                        key={field}
-                                        type="text"
-                                        className="form-control form-control-sm mb-2"
-                                        style={{ maxWidth: "500px", height: "40px" }}
-                                        value={project[field as keyof ProjectData] as string}
-                                        onChange={(e) => handleInputChange(field as keyof ProjectData, e.target.value)}
-                                    />
-                                ))}
+                    <div className="col-md-8">
+                        <h2>{project?.name}</h2>
+                        <p><strong>Status:</strong> {project?.status}</p>
+                        <p><strong>Marka:</strong> {project?.brand}</p>
+                        <p><strong>Model:</strong> {project?.model}</p>
+                        <p><strong>Rocznik:</strong> {project?.year}</p>
+                        <p><strong>Zlecenie:</strong> {project?.carId}</p>
+                        <p><strong>Użytkownicy:</strong> {project?.assignedTo?.join(", ")}</p>
 
-                                <div className="mb-3" style={{ maxWidth: "500px" }}>
-                                    <label className="form-label">Użytkownicy:</label>
-                                    <ul className="list-unstyled mb-3">
-                                        {project.assignedTo?.map((u, i) => (
-                                            <li
-                                                key={i}
-                                                className="d-flex justify-content-between align-items-center bg-light mb-2 rounded border px-2 py-1"
-                                            >
-                                                <span>{u}</span>
-                                                <button
-                                                    type="button"
-                                                    className="btn-icon"
-                                                    onClick={() => removeUser(u)}
-                                                    title="Usuń użytkownika"
-                                                >
-                                                    <i className="bi bi-x"></i>
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                    <div className="d-flex align-items-center mb-3 gap-2">
-                                        <select
-                                            className="form-control"
-                                            style={{ height: "40px" }}
-                                            value={newRole}
-                                            onChange={(e) => setNewRole(e.target.value)}
-                                        >
-                                            <option value="">Rola</option>
-                                            <option value="Blacharz">Blacharz</option>
-                                            <option value="Lakiernik">Lakiernik</option>
-                                            <option value="Mechanik">Mechanik</option>
-                                        </select>
-
-                                        <select
-                                            className="form-control"
-                                            style={{ height: "40px" }}
-                                            value={newName}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                        >
-                                            <option value="">Imię</option>
-                                            <option value="Arek">Arek</option>
-                                            <option value="Kasia">Kasia</option>
-                                            <option value="Marek">Marek</option>
-                                        </select>
-
-                                        <button
-                                            type="button"
-                                            className="btn-icon"
-                                            onClick={addUser}
-                                            title="Dodaj użytkownika"
-                                        >
-                                            <i className="bi bi-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button
-                                    className="btn btn-outline-dark hover-black mb-2"
-                                    onClick={() => {
-                                        saveProjectDates();
-                                        setEditProjectMode(false);
-                                    }}
-                                >
-                                    Zapisz zmiany
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <h2>{project.name}</h2>
-                                <p><strong>Status:</strong> {project.status}</p>
-                                <p><strong>Marka:</strong> {project.brand}</p>
-                                <p><strong>Model:</strong> {project.model}</p>
-                                <p><strong>Rocznik:</strong> {project.year}</p>
-                                <p><strong>Zlecenie:</strong> {project.carId}</p>
-                                <p><strong>Użytkownicy:</strong> {project.assignedTo?.join(", ") ?? "Brak"}</p>
-                            </>
-                        )}
-
-                        <div className="d-flex flex-wrap gap-2 mt-3">
-                            <input type="file" className="form-control" onChange={handleFileUpload} multiple />
-                            <Link to={`/projectdetails/${project.id}/lista_zakupow`} className="btn btn-outline-dark">
-                                🛒 Lista zakupów
-                            </Link>
-                            <button className="btn btn-outline-dark" onClick={() => setShowFileModal(true)}>
-                                📁 Moje pliki ({files.length})
-                            </button>
-                            <button className="btn btn-outline-dark" onClick={() => setEditProjectMode(!editProjectMode)}>
-                                {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Kalendarz */}
-                    <div className="calendar-wrapper order-md-3 order-2" style={{ marginLeft: "4px" }}>
-                        <div className="calendar-section">
-                            <label className="label-date">Data Startu:</label>
-                            <DatePicker
-                                selected={selectedStartDate}
-                                onChange={(date: Date | null) => setSelectedStartDate(date)}
-                                dateFormat="yyyy-MM-dd"
-                                className="date-picker burgundy-picker"
-                                placeholderText="Wybierz datę startu"
-                                locale="pl"
-                            />
-
-                            <label className="label-date mt-2">Data Zakończenia:</label>
-                            <DatePicker
-                                selected={selectedEndDate}
-                                onChange={(date: Date | null) => setSelectedEndDate(date)}
-                                dateFormat="yyyy-MM-dd"
-                                className="date-picker burgundy-picker"
-                                placeholderText="Wybierz datę zakończenia"
-                                locale="pl"
-                                minDate={selectedStartDate ?? undefined}
-                            />
-                        </div>
+                        <input type="file" multiple onChange={handleFileUpload} />
+                        <button className="btn btn-dark mt-2 me-2" onClick={uploadFiles}>Zapisz pliki</button>
+                        <button className="btn btn-outline-dark mt-2" onClick={() => setShowFileModal(true)}>
+                            📁 Moje pliki ({backendFiles.length})
+                        </button>
                     </div>
                 </div>
-
-                <div className="time-left mt-4" style={{ color: "#b03a2e", fontWeight: "bold" }}>
-                    ⏳ <strong>Pozostały czas do zakończenia:</strong> {timeLeft}
-                </div>
-
-                <Suspense fallback={<div>Ładowanie części...</div>}>
-                    <PartsTable
-                        parts={project.parts}
-                        updateStatus={updateStatus}
-                        updateField={updateField}
-                        addPart={addPart}
-                        removePart={removePart}
-                        editMode={editPartsMode}
-                        projectName={project.name}
-                        onEndEdit={async () => {
-                            await savePartsEdits(); // zapisuje zmiany
-                            setEditPartsMode(false); // kończy edycję
-                        }}
-                        onToggleEdit={() => setEditPartsMode((prev) => !prev)}
-                        onGeneratePDF={() => generateProjectDetails(project)}
-                    />
-                </Suspense>
 
                 {showFileModal && (
                     <Suspense fallback={<div>Ładowanie plików...</div>}>
                         <FileExplorerModal
-                            files={files}
+                            files={[...backendFiles, ...files]}
                             onClose={() => setShowFileModal(false)}
-                            onRemove={handleRemoveFile}
+                            onRemove={(index) => {
+                                const isBackend = index < backendFiles.length;
+                                if (isBackend) {
+                                    const file = backendFiles[index];
+                                    if ("id" in file && file.id) deleteFile(file.id);
+                                } else {
+                                    const newIndex = index - backendFiles.length;
+                                    handleRemoveFile(newIndex);
+                                }
+                            }}
                         />
                     </Suspense>
                 )}
