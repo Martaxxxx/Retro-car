@@ -18,26 +18,31 @@ class ProjectFileController extends Controller
     public function store(Request $request, $projectId)
     {
         $request->validate([
-            'files.*' => 'required|file|max:10240', // max 10MB na plik
+            'file' => 'required|file|max:10240', // max 10MB
         ]);
 
-        $uploaded = [];
+        $file = $request->file('file');
+        $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs("uploads/projects/project_{$projectId}/renovation", $filename, 'public');
 
-        foreach ($request->file('files', []) as $file) {
-            $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs("uploads/projects/project_{$projectId}/renovation", $filename, 'public');
+        $uploaded = ProjectFile::create([
+            'project_id' => $projectId,
+            'original_name' => $file->getClientOriginalName(),
+            'stored_path' => "/storage/{$path}",
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+        ]);
 
-            $uploaded[] = ProjectFile::create([
-                'project_id' => $projectId,
-                'original_name' => $file->getClientOriginalName(),
-                'stored_path' => "/storage/{$path}",
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
-            ]);
-        }
+    // Zwracamy dane w formacie pasującym do frontendu
+    return response()->json([
+        'id' => $uploaded->id,
+        'name' => $uploaded->original_name,
+        'url' => $uploaded->stored_path,
+        'size' => $uploaded->size,
+        'type' => $uploaded->mime_type,
+    ], 201);
+}
 
-        return response()->json($uploaded, 201);
-    }
 
     public function destroy($id)
     {
