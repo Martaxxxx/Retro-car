@@ -24,4 +24,11 @@ class Project extends Model
     {
         return $this->hasMany(\App\Models\Part::class);
     }
+
+    // RELACJA DO PLIKÓW
+    public function files()
+    {
+        return $this->hasMany(\App\Models\ProjectFile::class);
+    }
+
 }

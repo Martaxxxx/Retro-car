@@ -72,14 +72,13 @@ const ProjectDetails: React.FC = () => {
                 setSelectedStartDate(new Date(data.start_date));
                 setSelectedEndDate(new Date(data.end_date));
                 // **Nowość**: Pobieramy listę plików powiązanych z projektem (jeśli API je zwraca)
-                if (data.files) {
+                if (Array.isArray(data.files)) {
                     const existingFiles: FileData[] = data.files.map((f: any) => ({
                         id: f.id,
-                        name: f.name,
+                        name: f.original_name || f.name,
                         size: f.size,
-                        type: f.type || "",
-                        // Zakładamy, że backend zwraca ścieżkę lub nazwę pliku
-                        url: f.path || `/storage/${f.name}`,
+                        type: f.mime_type || f.type || "",
+                        url: f.stored_path || f.url || `/storage/${f.name}`,
                     }));
                     setFiles(existingFiles);
                 } else {
@@ -286,7 +285,7 @@ const ProjectDetails: React.FC = () => {
             if (!fileToRemove) return prev;
             // Jeśli plik ma ID (jest w bazie), usuwamy go również na serwerze
             if (fileToRemove.id) {
-                axios.delete(`/projects/${projectId}/files/${fileToRemove.id}`)
+                axios.delete(`/projects/files/${fileToRemove.id}`)
                      .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
             }
             // Usuwamy plik z lokalnego stanu

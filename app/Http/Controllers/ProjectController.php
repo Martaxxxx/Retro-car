@@ -82,6 +82,7 @@ class ProjectController extends Controller
         // Tu możesz pobrać przypisanych użytkowników, części itd.
         $project->assignedTo = ['Blacharz_Arek', 'Lakiernik_Kasia'];
         $project->parts = $project->parts()->get(); // ← relacja w modelu
+        $project->files = $project->files()->get(); // relacja do plików
         $project->description = 'Tutaj będzie opis projektu';
 
         return response()->json($project);

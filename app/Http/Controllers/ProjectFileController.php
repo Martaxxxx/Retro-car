@@ -47,9 +47,16 @@ class ProjectFileController extends Controller
     public function destroy($id)
     {
         $file = ProjectFile::findOrFail($id);
-        Storage::disk('public')->delete(str_replace('/storage/', '', $file->stored_path));
+
+        // Usuń fizyczny plik z dysku
+        $relativePath = str_replace('/storage/', '', $file->stored_path);
+        \Log::info("Usuwanie pliku: $relativePath");
+        Storage::disk('public')->delete($relativePath);
+
+        // Usuń z bazy
         $file->delete();
 
         return response()->json(['success' => true]);
     }
+
 }
