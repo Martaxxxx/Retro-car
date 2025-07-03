@@ -286,7 +286,7 @@ const ProjectDetails: React.FC = () => {
             if (!fileToRemove) return prev;
             // Jeśli plik ma ID (jest w bazie), usuwamy go również na serwerze
             if (fileToRemove.id) {
-                axios.delete(`/api/projects/${projectId}/files/${fileToRemove.id}`)
+                axios.delete(`/projects/${projectId}/files/${fileToRemove.id}`)
                      .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
             }
             // Usuwamy plik z lokalnego stanu
