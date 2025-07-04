@@ -43,9 +43,13 @@ class ShoppingListController extends Controller
             foreach ($request->file('invoices') as $file) {
                 $path = $file->store("uploads/projects/project_{$projectId}/shoppinglist", 'public');
                 $attachments[] = [
+                    'id' => time() + rand(1, 100000), // unikalne ID (albo użyj Str::uuid())
                     'name' => $file->getClientOriginalName(),
                     'url' => "/storage/{$path}",
+                    'type' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
                 ];
+;
             }
             $item->invoices = $attachments;
             $item->invoiceAttached = count($attachments) > 0;
@@ -66,7 +70,7 @@ class ShoppingListController extends Controller
             'priceNet' => 'sometimes|required|numeric',
             'priceGross' => 'sometimes|required|numeric',
             'status' => 'sometimes|required|in:dozamowienia,zamowione,dostarczone',
-            'link' => 'nullable|url',
+            'link' => 'nullable|string|max:255',
             'invoiceAttached' => 'nullable|boolean',
         ]);
 
@@ -76,9 +80,13 @@ class ShoppingListController extends Controller
             foreach ($request->file('invoices') as $file) {
                 $path = $file->store("uploads/projects/project_{$projectId}/shoppinglist", 'public');
                 $attachments[] = [
+                    'id' => time() + rand(1, 100000), // unikalne ID (albo użyj Str::uuid())
                     'name' => $file->getClientOriginalName(),
                     'url' => "/storage/{$path}",
+                    'type' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
                 ];
+
             }
         }
 
@@ -93,39 +101,43 @@ class ShoppingListController extends Controller
     public function destroy($id)
     {
         $item = ShoppingItem::findOrFail($id);
-        $projectId = $item->project_id;
 
-        // Usuń wszystkie pliki z folderu uploads/projects/project_{id}/shoppinglist
-        Storage::disk('public')->deleteDirectory("uploads/projects/project_{$projectId}/shoppinglist");
+        // ✅ Usuń tylko powiązane pliki
+        foreach ($item->invoices ?? [] as $file) {
+            $relativePath = str_replace('/storage/', '', $file['url']);
+            Storage::disk('public')->delete($relativePath);
+        }
 
         $item->delete();
 
         return response()->json(['success' => true]);
     }
 
-    public function deleteInvoice(Request $request)
+
+    public function deleteInvoice($id)
     {
-        $validated = $request->validate([
-            'itemId' => 'required|integer|exists:shopping_items,id',
-            'index' => 'required|integer|min:0',
-        ]);
+        $items = ShoppingItem::all();
 
-        $item = ShoppingItem::findOrFail($validated['itemId']);
-        $invoices = $item->invoices ?? [];
+        foreach ($items as $item) {
+            $invoices = $item->invoices ?? [];
 
-        if (!isset($invoices[$validated['index']])) {
-            return response()->json(['error' => 'Załącznik nie istnieje'], 404);
+            foreach ($invoices as $index => $invoice) {
+                if ((string)($invoice['id'] ?? '') === (string)$id) {
+                    $relativePath = str_replace('/storage/', '', $invoice['url']);
+                    Storage::disk('public')->delete($relativePath);
+
+                    array_splice($invoices, $index, 1);
+                    $item->invoices = $invoices;
+                    $item->invoiceAttached = count($invoices) > 0;
+                    $item->save();
+
+                    return response()->json(['message' => 'Załącznik usunięty']);
+                }
+            }
         }
 
-        $relativePath = str_replace('/storage/', '', $invoices[$validated['index']]['url']);
-        Storage::disk('public')->delete($relativePath);
-
-        array_splice($invoices, $validated['index'], 1);
-
-        $item->invoices = $invoices;
-        $item->invoiceAttached = count($invoices) > 0;
-        $item->save();
-
-        return response()->json(['success' => true]);
+        return response()->json(['message' => 'Nie znaleziono pliku'], 404);
     }
+
+
 }

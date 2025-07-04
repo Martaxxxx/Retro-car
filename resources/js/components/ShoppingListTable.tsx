@@ -1,9 +1,19 @@
 import React, { useState, lazy, Suspense } from "react";
 import { FaFilter, FaPaperclip } from "react-icons/fa";
 import Select from "react-select";
+import axios from "../axios";
+
 // Lazy load modal components
 const FileExplorerModal = lazy(() => import("./FileExplorerModal"));
 const NoteModal = lazy(() => import("./NoteModal"));
+
+export interface ShoppingInvoice {
+    id?: number;
+    name: string;
+    url: string;
+    size?: number;
+    type?: string;
+}
 
 export interface ShoppingItem {
     id: string;
@@ -14,8 +24,9 @@ export interface ShoppingItem {
     status: "dozamowienia" | "zamowione" | "dostarczone";
     link: string;
     invoiceAttached: boolean;
-    invoices: File[] | { name: string; url: string; size?: number; type?: string }[];
+    invoices: (File | ShoppingInvoice)[];
 }
+
 
 interface Props {
     items: ShoppingItem[];
@@ -54,6 +65,7 @@ const ShoppingListTable: React.FC<Props> = ({
     removeItem,
     editMode,
     isLocalNewRow,
+    onLoadInvoices,
 }) => {
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
     const [filters, setFilters] = useState({
@@ -66,23 +78,23 @@ const ShoppingListTable: React.FC<Props> = ({
     const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
 
     // Pliki do modala: backend + lokalne
-    const getAllFilesForModal = (item: ShoppingItem) => [
-        ...(Array.isArray(item.invoices)
-            ? item.invoices.filter(
-                  (inv) => inv && typeof inv === "object" && "url" in inv
-              )
-            : []),
-        ...(Array.isArray(item.invoices)
-            ? item.invoices
-                  .filter((inv) => inv instanceof File)
-                  .map((f) => ({
-                      name: f.name,
-                      size: f.size,
-                      type: f.type,
-                      file: f,
-                  }))
-            : []),
-    ];
+    const getAllFilesForModal = (item: ShoppingItem) => {
+        const backendFiles = (Array.isArray(item.invoices)
+            ? item.invoices.filter((inv) => inv && typeof inv === "object" && "url" in inv)
+            : []) as any[];
+
+        const localFiles = (Array.isArray(item.invoices)
+            ? item.invoices.filter((inv) => inv instanceof File).map((f) => ({
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                file: f,
+            }))
+            : []);
+
+        return [...backendFiles, ...localFiles];
+    };
+
 
     // Obsługa plików
     const handleFileChange = (id: string, files: FileList | null) => {
@@ -102,13 +114,28 @@ const ShoppingListTable: React.FC<Props> = ({
         updateItem(id, "invoiceAttached", updated.length > 0);
     };
 
-    const handleRemoveFile = (id: string, index: number) => {
+    const handleRemoveFile = async (id: string, index: number) => {
         const item = items.find((i) => i.id === id);
         if (!item) return;
+
         const updated = Array.isArray(item.invoices) ? [...item.invoices] : [];
+        const fileToRemove = updated[index];
+
+        // Jeśli to backendowy plik – ma ID
+        if (fileToRemove && typeof fileToRemove === "object" && "id" in fileToRemove && fileToRemove.id) {
+            try {
+                await axios.delete(`/shopping-items/files/${fileToRemove.id}`);
+            } catch (err) {
+                console.error("Błąd usuwania pliku z serwera:", err);
+            }
+        }
+
+
         updated.splice(index, 1);
         updateItem(id, "invoices", updated);
         updateItem(id, "invoiceAttached", updated.length > 0);
+
+        await onLoadInvoices(id);
     };
 
     const handleFilterChange = (
@@ -117,6 +144,7 @@ const ShoppingListTable: React.FC<Props> = ({
     ) => {
         setFilters((prev) => ({ ...prev, [field]: value }));
     };
+
 
     const filteredItems = items.filter((item) => {
         const nameMatch = item.name

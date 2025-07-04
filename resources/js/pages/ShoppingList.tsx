@@ -20,7 +20,7 @@ const ShoppingList: React.FC = () => {
     const [editMode, setEditMode] = useState(false);
     const [showSummary, setShowSummary] = useState(true);
     const [items, setItems] = useState<ShoppingItem[]>([]);
-    const [localNewRow, setLocalNewRow] = useState<LocalNewRow | null>(null);
+    const [localNewRows, setLocalNewRows] = useState<LocalNewRow[]>([]);
     const [addError, setAddError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [fallbackProject, setFallbackProject] = useState<ProjectData | null>(null);
@@ -50,19 +50,21 @@ const ShoppingList: React.FC = () => {
 
     const loadInvoicesForItem = async (itemId: string) => {
         try {
-            const res = await axios.get(`/shopping-items/${itemId}/invoices`);
-            const invoiceLinks = res.data.invoices || [];
-            setItems(prev =>
-                prev.map(item =>
-                    item.id === itemId
-                        ? { ...item, invoicesDetails: invoiceLinks, invoicesLoaded: true }
-                        : item
-                )
-            );
+            const res = await axios.get(`/projects/${projectId}/shopping-items`);
+            const refreshed = Array.isArray(res.data) ? res.data : [];
+
+            setItems(prev => {
+                return prev.map(item => {
+                    const updated = refreshed.find((f: any) => f.id === item.id);
+                    return updated ? updated : item;
+                });
+            });
         } catch (error) {
-            console.error("Błąd podczas ładowania faktur:", error);
+            console.error("Błąd podczas odświeżania plików:", error);
         }
     };
+
+
 
     const handleUpdate = async (id: string, field: keyof ShoppingItem, value: any) => {
         const itemToUpdate = items.find(item => item.id === id);
@@ -73,7 +75,20 @@ const ShoppingList: React.FC = () => {
             return;
         }
 
-        const updatedItem = { ...itemToUpdate, [field]: value };
+        let updatedInvoices = itemToUpdate.invoices;
+
+        if (field === "invoices") {
+            updatedInvoices = [
+                ...(itemToUpdate.invoices.filter(f => !(f instanceof File)) as any[]),
+                ...(Array.isArray(value) ? value.filter(f => f instanceof File) : []),
+            ];
+        }
+
+        const updatedItem = {
+            ...itemToUpdate,
+            [field]: value,
+            invoices: updatedInvoices,
+        };
 
         try {
             const formData = new FormData();
@@ -83,6 +98,7 @@ const ShoppingList: React.FC = () => {
             formData.append("priceGross", String(updatedItem.priceGross));
             formData.append("status", updatedItem.status);
             formData.append("link", updatedItem.link || "");
+
             if (updatedItem.invoices && updatedItem.invoices.length > 0) {
                 for (const file of updatedItem.invoices) {
                     if (file instanceof File) {
@@ -103,61 +119,73 @@ const ShoppingList: React.FC = () => {
         }
     };
 
-    const handleLocalNewRowChange = (field: keyof LocalNewRow, value: any) => {
-        setLocalNewRow(prev => prev ? { ...prev, [field]: value } : null);
+
+    const handleLocalNewRowChange = (index: number, field: keyof LocalNewRow, value: any) => {
+        setLocalNewRows(prev =>
+            prev.map((row, i) =>
+                i === index ? { ...row, [field]: value } : row
+            )
+        );
     };
+
 
     const handleAddEmptyRow = () => {
-        setLocalNewRow({
-            name: "",
-            notes: "",
-            priceGross: 0,
-            priceNet: 0,
-            status: "dozamowienia",
-            link: "",
-            invoiceAttached: false,
-            invoices: [],
-        });
-        setAddError(null);
+     setLocalNewRows((prev) => [
+       ...prev,
+        {
+          name: "",
+          notes: "",
+          priceGross: 0,
+          priceNet: 0,
+          status: "dozamowienia",
+          link: "",
+          invoiceAttached: false,
+          invoices: [],
+        },
+      ]);
+      setAddError(null);
     };
 
-    const handleSaveNewRow = async () => {
-        if (!projectId || !localNewRow) return;
-        if (localNewRow.name.trim() === "") {
-            setAddError("Nazwa pozycji jest wymagana!");
-            return;
+
+    const handleSaveAllNewRows = async () => {
+      const savedItems: ShoppingItem[] = [];
+
+      for (const newRow of localNewRows) {
+        if (!newRow.name || newRow.name.trim() === "") {
+          console.warn("Pominięto pusty wiersz bez nazwy");
+          continue;
         }
-        setAddError(null);
+
+        const formData = new FormData();
+        formData.append("name", newRow.name);
+        formData.append("notes", newRow.notes || "");
+        formData.append("priceNet", String(newRow.priceNet));
+        formData.append("priceGross", String(newRow.priceGross));
+        formData.append("status", newRow.status);
+        formData.append("link", newRow.link || "");
+        if (newRow.invoices?.length) {
+          newRow.invoices.forEach((file) => {
+            if (file instanceof File) formData.append("invoices[]", file);
+          });
+        }
+
         try {
-            const formData = new FormData();
-            formData.append("name", localNewRow.name);
-            formData.append("notes", localNewRow.notes || "");
-            formData.append("priceNet", String(localNewRow.priceNet));
-            formData.append("priceGross", String(localNewRow.priceGross));
-            formData.append("status", localNewRow.status);
-            formData.append("link", localNewRow.link || "");
-            if (localNewRow.invoices && localNewRow.invoices.length > 0) {
-                for (const file of localNewRow.invoices) {
-                    if (file instanceof File) {
-                        formData.append("invoices[]", file);
-                    }
-                }
-            }
-
-            const response = await axios.post(`/projects/${projectId}/shopping-items`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            setItems(prev => [...prev, response.data]);
-            setLocalNewRow(null);
-        } catch (error: any) {
-            if (error.response?.data?.errors?.name) {
-                setAddError(error.response.data.errors.name.join(", "));
-            }
+          const response = await axios.post(`/projects/${projectId}/shopping-items`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          savedItems.push(response.data);
+        } catch (err) {
+          console.error("Błąd zapisu pozycji:", err);
         }
+      }
+
+      setItems((prev) => [...prev, ...savedItems]);
+      setLocalNewRows([]);
     };
+
 
     const handleCancelNewRow = () => {
-        setLocalNewRow(null);
+        setLocalNewRows([]);
         setAddError(null);
     };
 
@@ -177,11 +205,10 @@ const ShoppingList: React.FC = () => {
     };
 
     const handleSaveEdit = async () => {
-        if (localNewRow) {
-            await handleSaveNewRow();
-        }
-        setEditMode(false);
+      await handleSaveAllNewRows();
+      setEditMode(false);
     };
+
 
     if (!project || loading) {
         return (
@@ -246,23 +273,31 @@ const ShoppingList: React.FC = () => {
                 </div>
 
                 <ShoppingListTable
-                    items={localNewRow ? [...items, { ...localNewRow, id: "local-new-row" }] : items}
+                    items={[
+                      ...items,
+                      ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
+                    ]}
+
                     updateItem={(id, field, value) => {
-                        if (id === "local-new-row") {
-                            handleLocalNewRowChange(field as keyof LocalNewRow, value);
-                        } else {
-                            handleUpdate(id, field, value);
-                        }
-                    }}
+      if (String(id).startsWith("local-new-")) {
+        const index = parseInt(id.replace("local-new-", ""));
+        handleLocalNewRowChange(index, field as keyof LocalNewRow, value);
+      } else {
+        handleUpdate(id, field, value);
+      }
+    }}
+
                     editMode={editMode}
                     removeItem={id => {
-                        if (id === "local-new-row") {
-                            handleCancelNewRow();
-                        } else {
-                            handleRemoveItem(id);
-                        }
-                    }}
-                    isLocalNewRow={id => id === "local-new-row"}
+        if (String(id).startsWith("local-new-")) {
+            const index = parseInt(id.replace("local-new-", ""));
+            setLocalNewRows(prev => prev.filter((_, i) => i !== index));
+        } else {
+            handleRemoveItem(id);
+        }
+    }}
+
+                    isLocalNewRow={id => String(id).startsWith("local-new-")}
                     onLoadInvoices={loadInvoicesForItem}
                 />
 

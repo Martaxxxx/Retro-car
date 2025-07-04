@@ -271,10 +271,21 @@ const ProjectDetails: React.FC = () => {
 
         }
 
-        // Aktualizujemy stan `files` dodając nowe pliki (już przesłane na serwer)
-        if (newFilesData.length > 0) {
-            setFiles((prev) => [...prev, ...newFilesData]);
+        // Po przesłaniu – odśwież wszystkie pliki z backendu
+        try {
+            const refreshed = await axios.get(`/projects/${projectId}/files`);
+            const fetched = (refreshed.data || []).map((f: any) => ({
+                id: f.id,
+                name: f.original_name || f.name,
+                size: f.size,
+                type: f.mime_type || f.type || "",
+                url: f.stored_path || f.url || `/storage/${f.name}`,
+            }));
+            setFiles(fetched);
+        } catch (err) {
+            console.error("Błąd odświeżenia plików po uploadzie", err);
         }
+
         // Czyszczenie wartości input, aby można było dodać ten sam plik ponownie w razie potrzeby
         e.target.value = "";
     };

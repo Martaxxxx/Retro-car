@@ -59,7 +59,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
 
     // ✅ Nowa trasa do usuwania jednego załącznika (pliku) z itemu:
-    Route::delete('/shopping-items/invoice', [ShoppingListController::class, 'deleteInvoice']);
+    Route::delete('/shopping-items/files/{id}', [ShoppingListController::class, 'deleteInvoice']);
 
         // 📁 "Moje pliki" – upload i zarządzanie plikami w projektach
     Route::get('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'index']);
