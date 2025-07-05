@@ -13,7 +13,7 @@ class ProjectController extends Controller
     // 📦 Zwraca wszystkie projekty
     public function index()
     {
-        $projects = Project::all();
+        $projects = Project::with(['shoppingItems', 'parts'])->get();
         return response()->json($projects);
     }
 

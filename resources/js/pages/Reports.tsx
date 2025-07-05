@@ -56,15 +56,20 @@ const ReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [reportType, setReportType] = useState<"costs" | "progress" | "">("");
 
-  // Pobierz projekty z backendu
+  // Pobierz projekty z backendu i zmapuj shopping_items na shoppingList
   useEffect(() => {
     axios.get("/projects")
       .then(res => {
-        setAllProjects(res.data);
-        console.log("ALL PROJECTS:", res.data); // <-- dodaj to
+        const mapped = res.data.map((p: any) => ({
+          ...p,
+          shoppingList: p.shopping_items ?? [], // <-- MAPOWANIE!
+        }));
+        setAllProjects(mapped);
+        console.log("ALL PROJECTS:", mapped); // debug
       })
       .catch(err => console.error("Błąd pobierania projektów:", err));
   }, []);
+
   const handleCheckboxChange = (id: string) => {
     setSelectedProjectIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]

@@ -226,7 +226,7 @@ const Renovations: React.FC = () => {
                         <div className="col" key={index}>
                             <div
                                 className="card h-100 shadow"
-                                onClick={() => navigate(`/projectdetails/${project.id}`)}
+                                onClick={() => navigate(`/projectdetails/${project.id}/${encodeURIComponent(project.name)}`)}
                                 style={{ cursor: "pointer" }}
                             >
                                 {project.image && (
