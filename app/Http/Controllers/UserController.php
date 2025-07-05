@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\LoginLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -56,7 +57,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'role' => 'required|string|in:admin,manager,user,purchaser',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image|max:8000',
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -92,4 +93,27 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Zwraca historię logowań danego użytkownika.
+     */
+    public function loginLogs(Request $request, $id)
+    {
+        $perPage = 25;
+        $query = \App\Models\LoginLog::where('user_id', $id)->orderBy('created_at', 'desc');
+    
+        // Filtrowanie po dacie (zakres)
+        if ($request->has('from')) {
+            $query->whereDate('created_at', '>=', $request->query('from'));
+        }
+    
+        if ($request->has('to')) {
+            $query->whereDate('created_at', '<=', $request->query('to'));
+        }
+    
+        $logs = $query->paginate($perPage);
+    
+        return response()->json($logs);
+    }
+    
 }

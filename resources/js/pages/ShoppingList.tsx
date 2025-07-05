@@ -64,16 +64,10 @@ const ShoppingList: React.FC = () => {
         }
     };
 
-
-
+    // USUNIĘTO WALIDACJĘ "Nazwa pozycji jest wymagana!" PODCZAS EDYCJI
     const handleUpdate = async (id: string, field: keyof ShoppingItem, value: any) => {
         const itemToUpdate = items.find(item => item.id === id);
         if (!itemToUpdate) return;
-
-        if (field === "name" && typeof value === "string" && value.trim() === "") {
-            alert("Nazwa pozycji jest wymagana!");
-            return;
-        }
 
         let updatedInvoices = itemToUpdate.invoices;
 
@@ -119,7 +113,6 @@ const ShoppingList: React.FC = () => {
         }
     };
 
-
     const handleLocalNewRowChange = (index: number, field: keyof LocalNewRow, value: any) => {
         setLocalNewRows(prev =>
             prev.map((row, i) =>
@@ -127,7 +120,6 @@ const ShoppingList: React.FC = () => {
             )
         );
     };
-
 
     const handleAddEmptyRow = () => {
      setLocalNewRows((prev) => [
@@ -145,7 +137,6 @@ const ShoppingList: React.FC = () => {
       ]);
       setAddError(null);
     };
-
 
     const handleSaveAllNewRows = async () => {
       const savedItems: ShoppingItem[] = [];
@@ -183,7 +174,6 @@ const ShoppingList: React.FC = () => {
       setLocalNewRows([]);
     };
 
-
     const handleCancelNewRow = () => {
         setLocalNewRows([]);
         setAddError(null);
@@ -208,7 +198,6 @@ const ShoppingList: React.FC = () => {
       await handleSaveAllNewRows();
       setEditMode(false);
     };
-
 
     if (!project || loading) {
         return (

@@ -16,12 +16,12 @@ const PartsTable = lazy(() => import("../components/PartsTable"));
 const FileExplorerModal = lazy(() => import("../components/FileExplorerModal"));
 
 interface FileData {
-    id?: number;               // Dodane: opcjonalne ID pliku (jeśli zapisany w bazie)
+    id?: number;
     name: string;
     size: number;
     type: string;
-    file?: File;               // Zmienione: plik jest opcjonalny (brak dla już załadowanych)
-    url: string;              // Dodane: opcjonalny URL (ścieżka) do podglądu/pobrania
+    file?: File;
+    url: string;
 }
 
 const ProjectDetails: React.FC = () => {
@@ -31,13 +31,15 @@ const ProjectDetails: React.FC = () => {
     const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
     const [editProjectMode, setEditProjectMode] = useState(false);
     const [editPartsMode, setEditPartsMode] = useState(false);
-    const [files, setFiles] = useState<FileData[]>([]);           // Tablica plików powiązanych z projektem
+    const [files, setFiles] = useState<FileData[]>([]);
     const [showFileModal, setShowFileModal] = useState(false);
     const [newRole, setNewRole] = useState("");
     const [newName, setNewName] = useState("");
     const [timeLeft, setTimeLeft] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // Dodajemy spinner dla zapisu części
+    const [savingParts, setSavingParts] = useState(false);
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -46,7 +48,6 @@ const ProjectDetails: React.FC = () => {
                 setError(null);
                 const res = await axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`);
                 const data = res.data;
-                // Ustawiamy dane projektu
                 setProject({
                     id: data.id,
                     name: data.name,
@@ -71,7 +72,6 @@ const ProjectDetails: React.FC = () => {
                 });
                 setSelectedStartDate(new Date(data.start_date));
                 setSelectedEndDate(new Date(data.end_date));
-                // **Nowość**: Pobieramy listę plików powiązanych z projektem (jeśli API je zwraca)
                 if (Array.isArray(data.files)) {
                     const existingFiles: FileData[] = data.files.map((f: any) => ({
                         id: f.id,
@@ -82,7 +82,7 @@ const ProjectDetails: React.FC = () => {
                     }));
                     setFiles(existingFiles);
                 } else {
-                    setFiles([]); // brak plików początkowo
+                    setFiles([]);
                 }
             } catch (err: any) {
                 setError("Nie udało się załadować projektu.");
@@ -128,7 +128,6 @@ const ProjectDetails: React.FC = () => {
                   }
                 : null
         );
-        // Uwaga: Tutaj można wywołać API do zapisania dat na serwerze, jeśli to wymagane.
     };
 
     const addUser = () => {
@@ -152,6 +151,7 @@ const ProjectDetails: React.FC = () => {
         );
     };
 
+    // Część: obsługa części projektu
     const updateStatus = async (partId: string, newStatus: Part["status"]) => {
         try {
             await axios.put(`/parts/${partId}`, { status: newStatus });
@@ -170,48 +170,22 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    const updateField = async (
+    // ZMIANA: updateField - tylko lokalnie!
+    const updateField = (
         partId: string,
         field: keyof Omit<Part, "id" | "partCode">,
         value: string
     ) => {
-        try {
-            const part = project?.parts.find((p) => p.id === partId);
-            if (!part) return;
-            const id = part.id;
-
-            if (
-                typeof id === "string" &&
-                (id.startsWith("temp-") || id === "" || id.startsWith("p"))
-            ) {
-                // Jeśli część jest tymczasowa (niezapisana w bazie), aktualizujemy tylko stan lokalny
-                setProject((prev) =>
-                    prev
-                        ? {
-                              ...prev,
-                              parts: prev.parts.map((p) =>
-                                  p.id === partId ? { ...p, [field]: value } : p
-                              ),
-                          }
-                        : null
-                );
-            } else {
-                // Jeśli część istnieje w bazie, wysyłamy zmianę do API
-                await axios.put(`/parts/${partId}`, { [field]: value });
-                setProject((prev) =>
-                    prev
-                        ? {
-                              ...prev,
-                              parts: prev.parts.map((p) =>
-                                  p.id === partId ? { ...p, [field]: value } : p
-                              ),
-                          }
-                        : null
-                );
-            }
-        } catch (error) {
-            console.error("Błąd aktualizacji pola części:", error);
-        }
+        setProject((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      parts: prev.parts.map((p) =>
+                          p.id === partId ? { ...p, [field]: value } : p
+                      ),
+                  }
+                : null
+        );
     };
 
     const addPart = (newPart: Part) => {
@@ -220,58 +194,44 @@ const ProjectDetails: React.FC = () => {
         );
     };
 
+    // removePart - powiadomienie od razu po usunięciu
     const removePart = async (id: string) => {
         try {
             await axios.delete(`/parts/${id}`);
             setProject((prev) =>
                 prev ? { ...prev, parts: prev.parts.filter((p) => p.id !== id) } : null
             );
+            window.dispatchEvent(new Event("notifications:update"));
         } catch (error) {
             console.error("Błąd usuwania części:", error);
         }
     };
 
-    // Zmieniono funkcję na asynchroniczną, aby wysyłać pliki do serwera
+    // Pliki
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const uploadedFiles = e.target.files;
         if (!uploadedFiles) return;
         const filesArray = Array.from(uploadedFiles);
-        let newFilesData: FileData[] = [];
 
         for (const file of filesArray) {
-            // Przygotowanie danych formularza dla każdego pliku
             const formData = new FormData();
             formData.append("file", file);
             try {
-                // Wysłanie pliku do API (zakładamy istnienie endpointu do uploadu plików projektu)
                 const response = await axios.post(`/projects/${projectId}/files`, formData, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                const savedFile = response.data;
-                // Dodajemy informacje o zapisie (zwrócone z serwera) do stanu
-                newFilesData.push({
-                    id: savedFile.id,
-                    name: savedFile.name || file.name,
-                    size: savedFile.size || file.size,
-                    type: savedFile.type || file.type,
-                    url: savedFile.path 
-                        ? savedFile.path 
-                        : (savedFile.name ? `/storage/${savedFile.name}` : undefined),
-                    // Nie zapisujemy pola `file`, bo plik jest już na serwerze
-                });
+                // ignorujemy tutaj newFilesData - i tak odświeżamy całą listę plików poniżej
             } catch (err: any) {
-             if (err.response) {
-                 console.error("Odpowiedź serwera:", err.response.data);
-                  alert("Błąd serwera: " + JSON.stringify(err.response.data));
-             } else {
-                   console.error("Inny błąd:", err);
-                  alert("Błąd przesyłania pliku: " + file.name);
-             }
+                if (err.response) {
+                    console.error("Odpowiedź serwera:", err.response.data);
+                    alert("Błąd serwera: " + JSON.stringify(err.response.data));
+                } else {
+                    console.error("Inny błąd:", err);
+                    alert("Błąd przesyłania pliku: " + file.name);
+                }
             }
-
         }
 
-        // Po przesłaniu – odśwież wszystkie pliki z backendu
         try {
             const refreshed = await axios.get(`/projects/${projectId}/files`);
             const fetched = (refreshed.data || []).map((f: any) => ({
@@ -285,8 +245,6 @@ const ProjectDetails: React.FC = () => {
         } catch (err) {
             console.error("Błąd odświeżenia plików po uploadzie", err);
         }
-
-        // Czyszczenie wartości input, aby można było dodać ten sam plik ponownie w razie potrzeby
         e.target.value = "";
     };
 
@@ -294,41 +252,42 @@ const ProjectDetails: React.FC = () => {
         setFiles((prev) => {
             const fileToRemove = prev[index];
             if (!fileToRemove) return prev;
-            // Jeśli plik ma ID (jest w bazie), usuwamy go również na serwerze
             if (fileToRemove.id) {
                 axios.delete(`/projects/files/${fileToRemove.id}`)
                      .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
             }
-            // Usuwamy plik z lokalnego stanu
             const updatedFiles = prev.filter((_, i) => i !== index);
             return updatedFiles;
         });
     };
 
+    // Najważniejsze: zapis części i powiadomienie tylko po sukcesie!
     const savePartsEdits = async () => {
         if (!project) return;
+        setSavingParts(true);
         try {
             let updatedParts: Part[] = [];
-            for (const part of project.parts) {
-                const id = part.id;
-                if (typeof id === "string" && id.startsWith("temp-")) {
-                    // Nowa część: zapis do bazy
-                    if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
-                        const response = await axios.post(`/projects/${project.id}/parts`, {
-                            part_code: part.partCode,
-                            name: part.name,
-                            category: part.category,
-                            notes: part.notes,
-                            status: part.status,
-                        });
-                        // API może zwrócić nową część; aktualizujemy ją
-                        updatedParts.push({
-                            ...response.data,
-                            partCode: response.data.partCode || response.data.part_code || part.partCode,
-                        });
-                    }
-                } else {
-                    // Aktualizacja istniejącej części
+            // Nowe części: tworzymy pojedynczo (jak było)
+            const newParts = project.parts.filter(p => typeof p.id === "string" && p.id.startsWith("temp-"));
+            for (const part of newParts) {
+                if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
+                    const response = await axios.post(`/projects/${project.id}/parts`, {
+                        part_code: part.partCode,
+                        name: part.name,
+                        category: part.category,
+                        notes: part.notes,
+                        status: part.status,
+                    });
+                    updatedParts.push({
+                        ...response.data,
+                        partCode: response.data.partCode || response.data.part_code || part.partCode,
+                    });
+                }
+            }
+            // Istniejące części: równoległe PUT!
+            const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
+            await Promise.all(
+                existingParts.map(async part => {
                     await axios.put(`/parts/${part.id}`, {
                         name: part.name,
                         category: part.category,
@@ -336,19 +295,20 @@ const ProjectDetails: React.FC = () => {
                         status: part.status,
                     });
                     updatedParts.push(part);
-                }
-            }
-            // Aktualizujemy stan projektu z nową listą części
+                })
+            );
             setProject((prev) =>
                 prev ? { ...prev, parts: updatedParts } : null
             );
+            window.dispatchEvent(new Event("notifications:update"));
             setEditPartsMode(false);
         } catch (err) {
             alert("Błąd zapisu części: " + err);
+        } finally {
+            setSavingParts(false);
         }
     };
 
-    // Wyświetlanie stanu ładowania / błędu / braku projektu
     if (loading) return <WheelSpinner />;
     if (error) return <div className="container mt-5 text-danger">{error}</div>;
     if (!project) return <div className="container mt-5">Brak projektu.</div>;
@@ -358,7 +318,6 @@ const ProjectDetails: React.FC = () => {
             <Navbar />
             <div className="container mt-5 pt-5">
                 <div className="row">
-                    {/* Zdjęcie projektu */}
                     <div className="col-md-4 order-md-1">
                         <img
                             src={
@@ -373,8 +332,6 @@ const ProjectDetails: React.FC = () => {
                             }}
                         />
                     </div>
-
-                    {/* Dane projektu */}
                     <div style={{ flex: "1 1 40%", maxWidth: "40%", minWidth: "280px" }} className="order-md-2 order-3">
                         {editProjectMode ? (
                             <>
@@ -469,7 +426,6 @@ const ProjectDetails: React.FC = () => {
                         )}
 
                         <div className="d-flex flex-wrap gap-2 mt-3">
-                            {/* Pole wyboru plików */}
                             <input 
                                 type="file" 
                                 className="form-control" 
@@ -493,8 +449,6 @@ const ProjectDetails: React.FC = () => {
                             </button>
                         </div>
                     </div>
-
-                    {/* Kalendarz dat */}
                     <div className="calendar-wrapper order-md-3 order-2" style={{ marginLeft: "4px" }}>
                         <div className="calendar-section">
                             <label className="label-date">Data Startu:</label>
@@ -525,23 +479,29 @@ const ProjectDetails: React.FC = () => {
                     ⏳ <strong>Pozostały czas do zakończenia:</strong> {timeLeft}
                 </div>
 
-                <Suspense fallback={<div>Ładowanie części...</div>}>
-                    <PartsTable
-                        parts={project.parts}
-                        updateStatus={updateStatus}
-                        updateField={updateField}
-                        addPart={addPart}
-                        removePart={removePart}
-                        editMode={editPartsMode}
-                        projectName={project.name}
-                        onEndEdit={async () => {
-                            await savePartsEdits();
-                            setEditPartsMode(false);
-                        }}
-                        onToggleEdit={() => setEditPartsMode((prev) => !prev)}
-                        onGeneratePDF={() => generateProjectDetails(project)}
-                    />
-                </Suspense>
+                {savingParts ? (
+                    <div className="d-flex justify-content-center align-items-center my-5">
+                        <WheelSpinner />
+                        <span className="ms-2">Zapisywanie zmian...</span>
+                    </div>
+                ) : (
+                    <Suspense fallback={<div>Ładowanie części...</div>}>
+                        <PartsTable
+                            parts={project.parts}
+                            updateStatus={updateStatus}
+                            updateField={updateField}
+                            addPart={addPart}
+                            removePart={removePart}
+                            editMode={editPartsMode}
+                            projectName={project.name}
+                            onEndEdit={async () => {
+                                await savePartsEdits();
+                            }}
+                            onToggleEdit={() => setEditPartsMode((prev) => !prev)}
+                            onGeneratePDF={() => generateProjectDetails(project)}
+                        />
+                    </Suspense>
+                )}
 
                 {showFileModal && (
                     <Suspense fallback={<div>Ładowanie plików...</div>}>

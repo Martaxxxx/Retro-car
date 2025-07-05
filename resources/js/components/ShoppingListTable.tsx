@@ -27,7 +27,6 @@ export interface ShoppingItem {
     invoices: (File | ShoppingInvoice)[];
 }
 
-
 interface Props {
     items: ShoppingItem[];
     updateItem: (id: string, field: keyof ShoppingItem, value: any) => void;
@@ -59,6 +58,8 @@ const statusOptions = [
     { value: "dostarczone", label: "Dostarczone" },
 ];
 
+const itemsPerPage = 25;
+
 const ShoppingListTable: React.FC<Props> = ({
     items,
     updateItem,
@@ -76,6 +77,9 @@ const ShoppingListTable: React.FC<Props> = ({
     });
     const [showFilters, setShowFilters] = useState(false);
     const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    // NEW: local editing state for names
+    const [editingNames, setEditingNames] = useState<Record<string, string>>({});
 
     // Pliki do modala: backend + lokalne
     const getAllFilesForModal = (item: ShoppingItem) => {
@@ -94,7 +98,6 @@ const ShoppingListTable: React.FC<Props> = ({
 
         return [...backendFiles, ...localFiles];
     };
-
 
     // Obsługa plików
     const handleFileChange = (id: string, files: FileList | null) => {
@@ -130,7 +133,6 @@ const ShoppingListTable: React.FC<Props> = ({
             }
         }
 
-
         updated.splice(index, 1);
         updateItem(id, "invoices", updated);
         updateItem(id, "invoiceAttached", updated.length > 0);
@@ -143,8 +145,8 @@ const ShoppingListTable: React.FC<Props> = ({
         value: string
     ) => {
         setFilters((prev) => ({ ...prev, [field]: value }));
+        setCurrentPage(1); // Resetuj na pierwszą stronę po zmianie filtrów
     };
-
 
     const filteredItems = items.filter((item) => {
         const nameMatch = item.name
@@ -160,6 +162,19 @@ const ShoppingListTable: React.FC<Props> = ({
             filters.status === "" || item.status === filters.status;
         return nameMatch && netMatch && grossMatch && statusMatch;
     });
+
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+    const paginatedItems = filteredItems.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    React.useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(1);
+        }
+    }, [filters, totalPages]);
 
     return (
         <div>
@@ -262,7 +277,7 @@ const ShoppingListTable: React.FC<Props> = ({
                         )}
                     </thead>
                     <tbody>
-                        {filteredItems.map((item) => (
+                        {paginatedItems.map((item) => (
                             <tr
                                 key={item.id}
                                 style={
@@ -275,16 +290,21 @@ const ShoppingListTable: React.FC<Props> = ({
                                     {editMode ? (
                                         <input
                                             className="form-control form-control-sm"
-                                            value={item.name ?? ""}
-                                            onChange={(e) =>
-                                                updateItem(
-                                                    item.id,
-                                                    "name",
-                                                    e.target.value
-                                                )
-                                            }
+                                            value={editingNames[item.id] ?? item.name ?? ""}
+                                            onChange={(e) => {
+                                                setEditingNames(ed => ({ ...ed, [item.id]: e.target.value }));
+                                            }}
+                                            onBlur={e => {
+                                                const value = e.target.value;
+                                                if (value.trim() === "") {
+                                                    alert("Nazwa jest wymagana!");
+                                                    setEditingNames(ed => ({ ...ed, [item.id]: item.name ?? "" }));
+                                                    return;
+                                                }
+                                                // Przekaż zmianę do parenta tylko jeśli nie jest pusta
+                                                updateItem(item.id, "name", value);
+                                            }}
                                             placeholder="Nazwa (wymagana)"
-                                            required
                                             autoFocus={
                                                 isLocalNewRow &&
                                                 isLocalNewRow(item.id)
@@ -332,34 +352,41 @@ const ShoppingListTable: React.FC<Props> = ({
                                     )}
                                 </td>
                                 <td>
-  {editMode ? (
-    <input
-      type="number"
-      className="form-control form-control-sm"
-      value={item.priceNet ?? ""}
-      onChange={(e) =>
-        updateItem(item.id, "priceNet", parseFloat(e.target.value))
-      }
-    />
-  ) : (
-    `${Number(item.priceNet).toFixed(2)} zł`
-  )}
-</td>
-<td>
-  {editMode ? (
-    <input
-      type="number"
-      className="form-control form-control-sm"
-      value={item.priceGross ?? ""}
-      onChange={(e) =>
-        updateItem(item.id, "priceGross", parseFloat(e.target.value))
-      }
-    />
-  ) : (
-    `${Number(item.priceGross).toFixed(2)} zł`
-  )}
-</td>
-
+                                    {editMode ? (
+                                        <input
+                                            type="number"
+                                            className="form-control form-control-sm"
+                                            value={item.priceNet ?? ""}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    item.id,
+                                                    "priceNet",
+                                                    e.target.value === "" ? "" : parseFloat(e.target.value)
+                                                )
+                                            }
+                                        />
+                                    ) : (
+                                        `${Number(item.priceNet).toFixed(2)} zł`
+                                    )}
+                                </td>
+                                <td>
+                                    {editMode ? (
+                                        <input
+                                            type="number"
+                                            className="form-control form-control-sm"
+                                            value={item.priceGross ?? ""}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    item.id,
+                                                    "priceGross",
+                                                    e.target.value === "" ? "" : parseFloat(e.target.value)
+                                                )
+                                            }
+                                        />
+                                    ) : (
+                                        `${Number(item.priceGross).toFixed(2)} zł`
+                                    )}
+                                </td>
                                 <td>
                                     {editMode ? (
                                         <Select
@@ -398,13 +425,13 @@ const ShoppingListTable: React.FC<Props> = ({
                                         />
                                     ) : item.link ? (
                                         <a
-                                        href={item.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="link-bordo"
-                                      >
-                                        Zobacz
-                                      </a>
+                                            href={item.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="link-bordo"
+                                        >
+                                            Zobacz
+                                        </a>
                                     ) : (
                                         "—"
                                     )}
@@ -423,7 +450,7 @@ const ShoppingListTable: React.FC<Props> = ({
                                             }
                                         />
                                     ) : Array.isArray(item.invoices) &&
-                                      item.invoices.length > 0 ? (
+                                        item.invoices.length > 0 ? (
                                         <>
                                             <button
                                                 type="button"
@@ -433,8 +460,7 @@ const ShoppingListTable: React.FC<Props> = ({
                                                 }
                                             >
                                                 <FaPaperclip />
-                                                {/* Możesz dodać liczbę plików: */}
-                                                <span style={{fontSize: "0.95em", marginLeft: 2}}>
+                                                <span style={{ fontSize: "0.95em", marginLeft: 2 }}>
                                                     ({item.invoices.length})
                                                 </span>
                                             </button>
@@ -469,7 +495,7 @@ const ShoppingListTable: React.FC<Props> = ({
                                             onClick={() => removeItem(item.id)}
                                             title={
                                                 isLocalNewRow &&
-                                                isLocalNewRow(item.id)
+                                                    isLocalNewRow(item.id)
                                                     ? "Anuluj"
                                                     : "Usuń"
                                             }
@@ -492,6 +518,43 @@ const ShoppingListTable: React.FC<Props> = ({
                     </tbody>
                 </table>
             </div>
+
+            {/* PAGINACJA STRZAŁKAMI */}
+            {totalPages > 1 && (
+                <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">
+                    <span
+                        style={{
+                            fontSize: "2rem",
+                            cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                            color: currentPage === 1 ? "#ccc" : "#9C2F3B",
+                            userSelect: "none",
+                            marginRight: "1rem"
+                        }}
+                        onClick={() => currentPage > 1 && setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        aria-label="Poprzednia strona"
+                        tabIndex={currentPage === 1 ? -1 : 0}
+                    >
+                        ←
+                    </span>
+                    <span className="align-self-center" style={{ fontWeight: "bold" }}>
+                        {currentPage} / {totalPages}
+                    </span>
+                    <span
+                        style={{
+                            fontSize: "2rem",
+                            cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                            color: currentPage === totalPages ? "#ccc" : "#9C2F3B",
+                            userSelect: "none",
+                            marginLeft: "1rem"
+                        }}
+                        onClick={() => currentPage < totalPages && setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        aria-label="Następna strona"
+                        tabIndex={currentPage === totalPages ? -1 : 0}
+                    >
+                        →
+                    </span>
+                </div>
+            )}
 
             {noteModalContent && (
                 <Suspense fallback={<div>Ładowanie notatki...</div>}>

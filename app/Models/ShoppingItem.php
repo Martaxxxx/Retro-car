@@ -18,10 +18,10 @@ class ShoppingItem extends Model
         'status',
         'link',
         'invoiceAttached',
-        'invoices', // <-- DODAJ to pole, żeby można je masowo przypisywać!
+        'invoices', 
     ];
 
     protected $casts = [
-        'invoices' => 'array', // <-- DODAJ to, żeby 'invoices' był automatycznie arrayem
+        'invoices' => 'array', 
     ];
 }

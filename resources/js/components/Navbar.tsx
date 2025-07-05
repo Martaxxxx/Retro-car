@@ -4,6 +4,7 @@ import { Search, Settings, User, Menu, LogOut } from "lucide-react";
 import { NavLink as RouterLink, useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
 import { useUser } from "../components/context/UserContext";
+import axios from "axios";
 
 const NavbarContainer = styled.div`
   width: 100%;
@@ -74,20 +75,10 @@ const SearchInputWrapper = styled.div`
   display: flex;
   align-items: center;
   background: #9c2f3b;
-  border: none;
   border-radius: 999px;
   padding: 6px 12px;
   margin-right: 24px;
   width: 280px;
-  transition: box-shadow 0.2s ease;
-
-  &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-  }
-
-  &:focus-within {
-    box-shadow: 0 0 0 2px rgba(156, 47, 59, 0.3);
-  }
 
   @media (max-width: 1024px) {
     display: none;
@@ -111,7 +102,6 @@ const SearchField = styled.input`
 const IconsContainer = styled.div`
   display: flex;
   gap: 40px;
-  color: black;
   align-items: center;
   margin-right: -80px;
 
@@ -122,7 +112,6 @@ const IconsContainer = styled.div`
 
 const IconWrapper = styled.div`
   cursor: pointer;
-  transition: color 0.3s;
 
   &:hover {
     color: #9c2f3b;
@@ -150,13 +139,8 @@ const LoginButton = styled.button`
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
   }
 
-  &:focus {
-    outline: 2px solid white;
-  }
-
   &:active {
     transform: scale(0.96);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   @media (max-width: 1024px) {
@@ -202,7 +186,6 @@ const DropdownMenu = styled.div`
   top: 60px;
   right: 0;
   background: white;
-  border: 1px solid #ccc;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   padding: 10px;
@@ -216,7 +199,6 @@ const DropdownItem = styled.div`
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: black;
 
   &:hover {
     background-color: #f5f5f5;
@@ -234,13 +216,26 @@ const RightSection = styled.div`
 
 export const Navbar = () => {
   const navigate = useNavigate();
+  const { user, logout } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const { user, logout } = useUser();
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showRenowacjeSuggestion, setShowRenowacjeSuggestion] = useState(false);
+  const searchResultsRef = useRef<HTMLDivElement | null>(null);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      if (searchResultsRef.current && !searchResultsRef.current.contains(e.target as Node)) {
+        setSearchResults([]);
+        setShowRenowacjeSuggestion(false);
+      }
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
@@ -249,78 +244,163 @@ export const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (searchQuery.length < 1) {
+        setSearchResults([]);
+        setShowRenowacjeSuggestion(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const response = await axios.get(`/projects/search`, {
+          params: { query: searchQuery },
+        });
+        const results = Array.isArray(response.data) ? response.data : [];
+        setSearchResults(results);
+        setShowRenowacjeSuggestion(results.length === 0);
+      } catch {
+        setSearchResults([]);
+        setShowRenowacjeSuggestion(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    const timeout = setTimeout(fetchResults, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const handleResultClick = (project: any) => {
+    navigate(`/projectdetails/${project.id}/${encodeURIComponent(project.name)}`);
+    setSearchResults([]);
+    setSearchQuery("");
+    setShowRenowacjeSuggestion(false);
+  };
+
+  // Zmieniamy na pełny reload na http://localhost:8000/renowacje
+  const handleRenowacjeClick = () => {
+    window.location.href = "http://localhost:8000/renowacje";
+    setSearchResults([]);
+    setSearchQuery("");
+    setShowRenowacjeSuggestion(false);
+  };
+
   return (
     <NavbarContainer>
       <Logo src="/retro2.png" alt="Logo" />
 
       <NavLinks $isOpen={isOpen}>
-        <StyledRouterLink to="/" end onClick={() => setIsOpen(false)}>Strona główna</StyledRouterLink>
-        <StyledRouterLink to="/renowacje" onClick={() => setIsOpen(false)}>Renowacje</StyledRouterLink>
-        <StyledRouterLink to="/raporty" onClick={() => setIsOpen(false)}>Raporty</StyledRouterLink>
+        <StyledRouterLink to="/" end>Strona główna</StyledRouterLink>
+        <StyledRouterLink to="/renowacje">Renowacje</StyledRouterLink>
+        <StyledRouterLink to="/raporty">Raporty</StyledRouterLink>
         {user?.roles?.includes("admin") && (
           <>
-            <StyledRouterLink to="/zarządzanie" onClick={() => setIsOpen(false)}>Zarządzanie</StyledRouterLink>
-            <StyledRouterLink to="/adminpanel" onClick={() => setIsOpen(false)}>Admin</StyledRouterLink>
+            <StyledRouterLink to="/zarządzanie">Zarządzanie</StyledRouterLink>
+            <StyledRouterLink to="/adminpanel">Admin</StyledRouterLink>
           </>
         )}
       </NavLinks>
 
-      <SearchInputWrapper>
-        <Search size={18} color="white" />
-        <SearchField placeholder="Szukaj..." />
-      </SearchInputWrapper>
+      <form onSubmit={(e) => e.preventDefault()} style={{ position: "relative" }}>
+        <SearchInputWrapper>
+          <Search size={18} color="white" />
+          <SearchField
+            placeholder="Szukaj projektów..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+        </SearchInputWrapper>
+
+        {(isLoading || searchResults.length > 0 || showRenowacjeSuggestion) && (
+          <div
+            ref={searchResultsRef}
+            style={{
+              position: "absolute",
+              top: "50px",
+              left: 0,
+              background: "white",
+              width: "280px",
+              zIndex: 100,
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.14)",
+              paddingTop: 7,
+              maxHeight: "300px",
+              overflowY: "auto",
+            }}
+          >
+            {isLoading ? (
+              <div style={{ padding: "12px", color: "#9c2f3b" }}>Ładowanie...</div>
+            ) : searchResults.length === 0 && showRenowacjeSuggestion ? (
+              <div style={{ padding: "12px", color: "#999" }}>
+                Brak wyników.
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={handleRenowacjeClick}
+                    style={{
+                      background: "#9c2f3b",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "20px",
+                      padding: "6px 18px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Przejdź do strony <b>Renowacje</b>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              searchResults.map((project, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleResultClick(project)}
+                  style={{
+                    padding: "10px 14px",
+                    borderBottom: "1px solid #eee",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  <strong>{project.name}</strong><br />
+                  <span style={{ fontSize: "12px", color: "#666" }}>
+                    {project.brand} {project.model} • {project.status}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </form>
 
       <IconsContainer>
-        <IconWrapper><NotificationBell /></IconWrapper>
-        <IconWrapper onClick={() => navigate("/ustawienia")}><Settings size={26} /></IconWrapper>
+        <IconWrapper>
+          <NotificationBell />
+        </IconWrapper>
+        <IconWrapper onClick={() => navigate("/ustawienia")}> <Settings size={26} /> </IconWrapper>
       </IconsContainer>
 
       <RightSection>
         {user ? (
-          <>
-            <div style={{ position: "relative" }} ref={dropdownRef}>
-              <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
-                <img src={user.avatar || "/user.jpg"} alt="avatar" />
-                Witaj, {user.name}
-              </UserGreeting>
-              {showDropdown && (
-                <DropdownMenu>
-                  <DropdownItem
-                    onClick={logout}
-                    style={{
-                      border: "2px solid #9C2F3B",
-                      color: "#9C2F3B",
-                      backgroundColor: "white",
-                      borderRadius: "24px",
-                      padding: "8px 14px",
-                      fontWeight: "bold",
-                      display: "flex",
-                      gap: "14px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <LogOut size={18} /> Wyloguj
-                  </DropdownItem>
-                </DropdownMenu>
-              )}
-            </div>
-
-            <Hamburger onClick={() => setIsOpen(!isOpen)}>
-              <Menu size={24} />
-            </Hamburger>
-          </>
+          <div style={{ position: "relative" }} ref={dropdownRef}>
+            <UserGreeting onClick={() => setShowDropdown(!showDropdown)}>
+              <img src={user.avatar || "/user.jpg"} alt="avatar" />
+              Witaj, {user.name}
+            </UserGreeting>
+            {showDropdown && (
+              <DropdownMenu>
+                <DropdownItem onClick={logout}>
+                  <LogOut size={18} /> Wyloguj
+                </DropdownItem>
+              </DropdownMenu>
+            )}
+          </div>
         ) : (
-          <>
-            <LoginButton onClick={() => navigate("/login")}>
-              <User size={18} />
-              Zaloguj się
-            </LoginButton>
-
-            <Hamburger onClick={() => setIsOpen(!isOpen)}>
-              <Menu size={24} />
-            </Hamburger>
-          </>
+          <LoginButton onClick={() => navigate("/login")}> <User size={18} /> Zaloguj się </LoginButton>
         )}
+        <Hamburger onClick={() => setIsOpen(!isOpen)}> <Menu size={24} /> </Hamburger>
       </RightSection>
     </NavbarContainer>
   );

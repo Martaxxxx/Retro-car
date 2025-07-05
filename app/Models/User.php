@@ -33,9 +33,14 @@ class User extends Authenticatable
         ];
     }
 
-    // 🔔 Relacja do powiadomień
+    // Relacja do powiadomień
     public function notifications()
     {
         return $this->hasMany(Notification::class);
     }
+    // Historia logów
+    public function loginLogs()
+{
+    return $this->hasMany(LoginLog::class);
+}
 }

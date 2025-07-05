@@ -22,13 +22,18 @@ class Project extends Model
     // RELACJA DO CZĘŚCI
     public function parts()
     {
-        return $this->hasMany(\App\Models\Part::class);
+        return $this->hasMany(\App\Models\Part::class, 'project_id');
     }
 
     // RELACJA DO PLIKÓW
     public function files()
     {
-        return $this->hasMany(\App\Models\ProjectFile::class);
+        return $this->hasMany(\App\Models\ProjectFile::class, 'project_id');
     }
 
+    // RELACJA DO POZYCJI ZAKUPOWYCH (SHOPPING ITEMS)
+    public function shoppingItems()
+    {
+        return $this->hasMany(\App\Models\ShoppingItem::class, 'project_id');
+    }
 }

@@ -65,11 +65,35 @@ class ProjectController extends Controller
         ], 201);
     }
 
+    // 🔍 Wyszukuje projekty na podstawie zapytania
+    public function search(Request $request)
+    {
+        $query = $request->query('query');  
+
+        if (!$query) {
+            return response()->json(['message' => 'Brak zapytania wyszukiwania'], 400);
+        }
+
+        $queryLower = strtolower($query);
+
+        $projects = Project::whereRaw('LOWER(name) LIKE ?', ['%' . $queryLower . '%'])
+            ->orWhereRaw('LOWER(brand) LIKE ?', ['%' . $queryLower . '%'])
+            ->orWhereRaw('LOWER(status) LIKE ?', ['%' . $queryLower . '%'])
+            ->orWhereRaw('LOWER(model) LIKE ?', ['%' . $queryLower . '%'])
+            ->orWhereRaw('LOWER(car_id) LIKE ?', ['%' . $queryLower . '%'])
+            ->orWhereRaw('CAST(year AS CHAR) LIKE ?', ['%' . $queryLower . '%'])
+            ->get();
+
+        Log::info("Wyniki wyszukiwania dla zapytania [$query]:", $projects->toArray());
+
+        return response()->json($projects);
+    }
+
     // 🔍 Pokazuje projekt po ID i nazwie
     public function showByIdAndName($id, $name)
     {
-        $decodedName = urldecode($name); // ← ważne!
-        \Log::info("🔍 Szukanie projektu ID [$id] z nazwą [$decodedName]");
+        $decodedName = urldecode($name);
+        Log::info("🔍 Szukanie projektu ID [$id] z nazwą [$decodedName]");
 
         $project = Project::where('id', $id)
             ->whereRaw('LOWER(name) = ?', [strtolower($decodedName)])
@@ -79,10 +103,9 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
         }
 
-        // Tu możesz pobrać przypisanych użytkowników, części itd.
         $project->assignedTo = ['Blacharz_Arek', 'Lakiernik_Kasia'];
-        $project->parts = $project->parts()->get(); // ← relacja w modelu
-        $project->files = $project->files()->get(); // relacja do plików
+        $project->parts = $project->parts()->get();
+        $project->files = $project->files()->get();
         $project->description = 'Tutaj będzie opis projektu';
 
         return response()->json($project);

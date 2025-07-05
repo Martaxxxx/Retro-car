@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -12,9 +13,10 @@ use App\Http\Controllers\ShoppingListController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ReportController;
 use App\Http\Middleware\IsAdmin;
 
-//  Widok SPA (React)
+// SPA główna strona
 Route::get('/', function () {
     return view('app');
 });
@@ -43,6 +45,10 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::put('/api/users/{id}', [UserController::class, 'update']);
     Route::post('/api/users', [UserController::class, 'store']);
     Route::post('/register', [RegisterController::class, 'register']);
+    // Usuwanie użytkownika w adminpanelu
+    Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+    // Logi użytkownika
+    Route::get('/api/users/{id}/logs', [UserController::class, 'loginLogs']);
 });
 
 //  Panel użytkownika – dla każdego zalogowanego
@@ -57,15 +63,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
     Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
-
-    // ✅ Nowa trasa do usuwania jednego załącznika (pliku) z itemu:
+  
+    // Usuwanie jednego załącznika (pliku) z itemu:
     Route::delete('/shopping-items/files/{id}', [ShoppingListController::class, 'deleteInvoice']);
 
-        // 📁 "Moje pliki" – upload i zarządzanie plikami w projektach
+    // "Moje pliki" – upload i zarządzanie plikami w projektach
     Route::get('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'index']);
     Route::post('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'store']);
     Route::delete('/projects/files/{id}', [\App\Http\Controllers\ProjectFileController::class, 'destroy']);
-
 });
 
 //  Części – brak auth
@@ -88,17 +93,20 @@ Route::get('/renovations', [RenovationController::class, 'index']);
 Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
 Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']); // dla slajdera
 
-use Illuminate\Support\Facades\DB;
-
-// ✅ Najpierw trasa diagnostyczna – inaczej React ją przechwyci
+// Trasa diagnostyczna 
 Route::get('/check-db-path', function () {
     return DB::connection()->getDatabaseName();
+});
+Route::get('/projects/search', [ProjectController::class, 'search']);
+
+
+// RAPORTY – DLA ZALOGOWANYCH 
+Route::middleware(['auth'])->group(function () {
+    Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
+    Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
 });
 
 // SPA fallback – React (wszystko inne)
 Route::get('/{any}', function () {
     return view('app');
 })->where('any', '.*');
-
-// usuwanie w adminpanel
-Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');

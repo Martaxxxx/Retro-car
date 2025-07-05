@@ -12,6 +12,7 @@ import ManagerPanel from "./pages/ManagerPanel";
 import Reports from "./pages/Reports";
 import Register from "./pages/Register";
 import AdminPanel from "./pages/AdminPanel"; 
+import UserLogs from "./pages/UserLogs";
 
 const App: React.FC = () => {
     return (
@@ -27,6 +28,7 @@ const App: React.FC = () => {
             <Route path="/raporty" element={<Reports />} />
             <Route path="/rejestracja" element={<Register />} />
             <Route path="/adminpanel" element={<AdminPanel />} /> 
+            <Route path="/admin/users/:id/logs" element={<UserLogs />} />
         </Routes>
     );
 };
