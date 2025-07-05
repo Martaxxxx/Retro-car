@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 interface User {
   id: number;
   name: string;
+  surname?: string;
   email: string;
   role: string;
   avatar?: string;
@@ -17,6 +18,7 @@ interface User {
 
 interface FormDataState {
   name: string;
+  surname: string;
   email: string;
   role: string;
   password?: string;
@@ -35,6 +37,7 @@ const AdminPanel: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<FormDataState>({
     name: "",
+    surname: "",
     email: "",
     role: "user",
     password: "",
@@ -65,6 +68,7 @@ const AdminPanel: React.FC = () => {
     setEditingUser(user);
     setFormData({
       name: user.name,
+      surname: user.surname || "",
       email: user.email,
       role: user.role,
     });
@@ -75,6 +79,7 @@ const AdminPanel: React.FC = () => {
     setEditingUser({ id: 0, name: "", email: "", role: "user", created_at: "" });
     setFormData({
       name: "",
+      surname: "",
       email: "",
       role: "user",
       password: "",
@@ -95,6 +100,7 @@ const AdminPanel: React.FC = () => {
   const buildFormData = () => {
     const data = new FormData();
     data.append("name", formData.name);
+    data.append("surname", formData.surname);
     data.append("email", formData.email);
     data.append("role", formData.role);
     if (formData.password) data.append("password", formData.password);
@@ -172,6 +178,7 @@ const AdminPanel: React.FC = () => {
     return (
       (!filterRole || user.role === filterRole) &&
       (user.name.toLowerCase().includes(term) ||
+        user.surname?.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
         user.role.toLowerCase().includes(term) ||
         user.id.toString().includes(term))
@@ -195,7 +202,7 @@ const AdminPanel: React.FC = () => {
 
         <div className="row mb-3">
           <div className="col-md-6">
-            <input type="text" className="form-control" placeholder="Szukaj (ID, imię, email, rola...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" className="form-control" placeholder="Szukaj (ID, imię, nazwisko, email, rola...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className="col-md-4">
             <select className="form-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
@@ -215,6 +222,7 @@ const AdminPanel: React.FC = () => {
                 <th>ID</th>
                 <th>Avatar</th>
                 <th>Imię</th>
+                <th>Nazwisko</th>
                 <th>Email</th>
                 <th>Rola</th>
                 <th>Utworzony</th>
@@ -229,6 +237,7 @@ const AdminPanel: React.FC = () => {
                     <img src={user.avatar || "/default-avatar.png"} alt="avatar" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                   </td>
                   <td>{user.name}</td>
+                  <td>{user.surname}</td>
                   <td>{user.email}</td>
                   <td>{user.role}</td>
                   <td>{new Date(user.created_at).toLocaleDateString()}</td>
@@ -269,6 +278,7 @@ const AdminPanel: React.FC = () => {
               </div>
               <div className="modal-body">
                 <input type="text" name="name" className="form-control mb-2" placeholder="Imię" value={formData.name} onChange={handleInputChange} />
+                <input type="text" name="surname" className="form-control mb-2" placeholder="Nazwisko" value={formData.surname} onChange={handleInputChange} />
                 <input type="email" name="email" className="form-control mb-2" placeholder="Email" value={formData.email} onChange={handleInputChange} />
                 <select name="role" className="form-select mb-2" value={formData.role} onChange={handleInputChange}>
                   <option value="admin">Admin</option>

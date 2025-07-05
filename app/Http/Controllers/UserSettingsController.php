@@ -17,7 +17,6 @@ class UserSettingsController extends Controller
             'name' => 'nullable|string|max:255',
             'surname' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
-            'login' => 'nullable|string|max:255|unique:users,login,' . $user->id,
             'current_password' => 'required_with:password|string',
             'password' => 'nullable|string|min:6|confirmed',
         ]);
@@ -38,10 +37,6 @@ class UserSettingsController extends Controller
 
         if ($request->filled('email')) {
             $user->email = $request->email;
-        }
-
-        if ($request->filled('login')) {
-            $user->login = $request->login;
         }
 
         if ($request->filled('password')) {
