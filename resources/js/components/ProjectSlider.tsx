@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState } from "react";
 import styled from "styled-components";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "../axios"; // lub inny Twój fetcher
+import axios from "../axios";
+import { useUser } from "../components/context/UserContext"; 
 
 const Container = styled.div`
   padding: 40px 20px;
@@ -113,11 +114,9 @@ const Progress = styled.div<{ $progress: number }>`
   transition: width 0.3s;
 `;
 
-// ILE KART NA STRONĘ ŁADOWAĆ
 const SLIDES_PER_PAGE = 5;
 
 const ProjectSlider: React.FC = () => {
-  // Lazy loading – trzymamy tylko załadowane projekty
   const [projects, setProjects] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -125,6 +124,9 @@ const ProjectSlider: React.FC = () => {
 
   const sliderRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Dodaj sprawdzanie zalogowania
+  const { user } = useUser();
 
   useEffect(() => {
     // Ładujemy pierwszą porcję na start
@@ -136,9 +138,8 @@ const ProjectSlider: React.FC = () => {
     if (loading) return;
     setLoading(true);
     try {
-      // ZMIEŃ NA SWOJE API!
       const res = await axios.get(`/projects?page=${pageToLoad}&per_page=${SLIDES_PER_PAGE}`);
-      const newProjects = res.data.data || res.data; // dopasuj do swojego API!
+      const newProjects = res.data.data || res.data;
       setProjects((prev) => [...prev, ...newProjects]);
       setHasMore(!!res.data.next_page_url || (newProjects.length === SLIDES_PER_PAGE));
       setPage(pageToLoad);
@@ -147,14 +148,12 @@ const ProjectSlider: React.FC = () => {
     }
   };
 
-  // Przewijanie + lazy loading
   const scroll = (dir: "left" | "right") => {
     if (sliderRef.current) {
       sliderRef.current.scrollBy({
         left: dir === "left" ? -300 : 300,
         behavior: "smooth",
       });
-      // Po przewinięciu w prawo do końca – doładuj więcej projektów
       if (dir === "right") {
         const slider = sliderRef.current;
         setTimeout(() => {
@@ -165,7 +164,7 @@ const ProjectSlider: React.FC = () => {
           ) {
             loadProjects(page + 1);
           }
-        }, 350); // po animacji scrolla
+        }, 350);
       }
     }
   };
@@ -174,6 +173,11 @@ const ProjectSlider: React.FC = () => {
     const encodedName = encodeURIComponent(name);
     navigate(`/projectdetails/${id}/${encodedName}`);
   };
+
+  // Jeśli user nie jest zalogowany, nie pokazuj nic (lub np. komunikat)
+  if (!user) {
+    return null; // lub: return <Container><Header>Musisz być zalogowany, by zobaczyć projekty.</Header></Container>
+  }
 
   return (
     <Container>
