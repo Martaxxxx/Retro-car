@@ -58,6 +58,12 @@ const customSelectStyles = {
   }),
 };
 
+const statusOptions = [
+  { value: "pending", label: "W przygotowaniu" },
+  { value: "ready", label: "Gotowy do montażu" },
+  { value: "installed", label: "Zamontowany" },
+];
+
 const PartsTable: React.FC<Props> = ({
   parts,
   updateStatus,
@@ -79,6 +85,9 @@ const PartsTable: React.FC<Props> = ({
   const tableRef = useRef<HTMLDivElement>(null);
   const addRowButtonRef = useRef<HTMLButtonElement>(null);
   const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
+
+  // Nowy stan - zapamiętaj status nowego wiersza (tymczasowe ID)
+  const [newRowsStatus, setNewRowsStatus] = useState<Record<string, Part["status"]>>({});
 
   const [filters, setFilters] = useState({
     partCode: "",
@@ -175,7 +184,6 @@ const PartsTable: React.FC<Props> = ({
     printWindow.document.close();
   };
 
-  // QR generowanie na każdą zmianę strony lub części
   useEffect(() => {
     if (!isQRCodeReady || typeof window.QRCode !== "function") return;
     const timeout = setTimeout(() => {
@@ -193,22 +201,24 @@ const PartsTable: React.FC<Props> = ({
     setCurrentPage(1);
   };
 
-  // Dodawanie wiersza tylko w trybie edycji
+  // Dodawanie wiersza w trybie edycji, status domyślny, ale można go zmienić od razu!
   const handleAddPart = () => {
     if (!editMode) return;
     const brandLetter = projectName.charAt(0).toUpperCase() || "X";
     const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
     const nextNumber = String(parts.length + 1).padStart(3, "0");
     const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
-
+    const tempId = `temp-${Date.now()}`;
     addPart({
-      id: `temp-${Date.now()}`,
+      id: tempId,
       partCode: newPartCode,
       name: "",
       category: "",
       notes: "",
-      status: "pending",
+      status: newRowsStatus[tempId] || "pending",
     });
+    // Ustaw status domyślny dla tego wiersza (opcjonalne)
+    setNewRowsStatus((prev) => ({ ...prev, [tempId]: "pending" }));
   };
 
   const toggleSelectAll = () => {
@@ -244,6 +254,9 @@ const PartsTable: React.FC<Props> = ({
   const visibleParts = paginatedParts.filter(
     (part) => editMode || (part.name && part.name.trim() !== "")
   );
+
+  // Wykrycie nowego wiersza (temp id)
+  const isNewRow = (part: Part) => part.id.startsWith("temp-");
 
   return (
     <div ref={tableRef}>
@@ -405,34 +418,39 @@ const PartsTable: React.FC<Props> = ({
               </td>
               <td>
                 {editMode ? (
-                  <Select
-                    styles={customSelectStyles}
-                    classNamePrefix="react-select"
-                    placeholder="Status"
-                    options={[
-                      { value: "pending", label: "W przygotowaniu" },
-                      { value: "ready", label: "Gotowy do montażu" },
-                      { value: "installed", label: "Zamontowany" },
-                    ]}
-                    value={[
-                      { value: "pending", label: "W przygotowaniu" },
-                      { value: "ready", label: "Gotowy do montażu" },
-                      { value: "installed", label: "Zamontowany" },
-                    ].find(opt => opt.value === part.status)}
-                    onChange={(selected) =>
-                      updateStatus(part.id, selected?.value as Part["status"])
-                    }
-                    isSearchable={false}
-                  />
+                  isNewRow(part) ? (
+                    <Select
+                      styles={customSelectStyles}
+                      classNamePrefix="react-select"
+                      placeholder="Status"
+                      options={statusOptions}
+                      value={statusOptions.find(opt => opt.value === (newRowsStatus[part.id] ?? part.status))}
+                      onChange={(selected) => {
+                        setNewRowsStatus((prev) => ({
+                          ...prev,
+                          [part.id]: selected?.value as Part["status"],
+                        }));
+                        // Możesz od razu zapisać status do store jeśli chcesz:
+                        updateStatus(part.id, selected?.value as Part["status"]);
+                      }}
+                      isSearchable={false}
+                    />
+                  ) : (
+                    <Select
+                      styles={customSelectStyles}
+                      classNamePrefix="react-select"
+                      placeholder="Status"
+                      options={statusOptions}
+                      value={statusOptions.find(opt => opt.value === part.status)}
+                      onChange={(selected) =>
+                        updateStatus(part.id, selected?.value as Part["status"])
+                      }
+                      isSearchable={false}
+                    />
+                  )
                 ) : (
                   <span>
-                    {
-                      {
-                        pending: "W przygotowaniu",
-                        ready: "Gotowy do montażu",
-                        installed: "Zamontowany",
-                      }[part.status]
-                    }
+                    {statusLabels[part.status]}
                   </span>
                 )}
 
