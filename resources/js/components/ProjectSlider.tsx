@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "../axios";
-import { useUser } from "../components/context/UserContext"; 
+import { useUser } from "../components/context/UserContext";
 
 const Container = styled.div`
   padding: 40px 20px;
@@ -128,19 +128,32 @@ const ProjectSlider: React.FC = () => {
   // Dodaj sprawdzanie zalogowania
   const { user } = useUser();
 
+  // Poprawiony efekt: czyść projekty przy każdej zmianie zalogowanego usera!
   useEffect(() => {
-    // Ładujemy pierwszą porcję na start
-    loadProjects(1);
-    // eslint-disable-next-line
-  }, []);
+    setProjects([]);
+    setPage(1);
+    setHasMore(true);
 
-  const loadProjects = async (pageToLoad: number) => {
+    if (user) {
+      loadProjects(1, true);
+    }
+    // eslint-disable-next-line
+  }, [user]);
+
+  // Dodaj parametr "reset" by nie dublować projektów gdy resetujemy
+  const loadProjects = async (pageToLoad: number, reset: boolean = false) => {
     if (loading) return;
     setLoading(true);
     try {
       const res = await axios.get(`/projects?page=${pageToLoad}&per_page=${SLIDES_PER_PAGE}`);
       const newProjects = res.data.data || res.data;
-      setProjects((prev) => [...prev, ...newProjects]);
+
+      setProjects(prev => {
+        if (reset) return newProjects; // Załaduj od nowa przy zmianie usera
+        // Nie dublujemy projektów!
+        const ids = new Set(prev.map(p => p.id));
+        return [...prev, ...newProjects.filter(np => !ids.has(np.id))];
+      });
       setHasMore(!!res.data.next_page_url || (newProjects.length === SLIDES_PER_PAGE));
       setPage(pageToLoad);
     } finally {
