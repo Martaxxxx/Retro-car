@@ -13,7 +13,7 @@ class UserController extends Controller
     public function index()
     {
         try {
-            $users = User::select('id', 'name', 'email', 'role', 'avatar', 'created_at')->get();
+            $users = User::select('id', 'name', 'surname', 'email', 'role', 'avatar', 'created_at')->get();
             return response()->json($users);
         } catch (\Exception $e) {
             return response()->json([
@@ -27,6 +27,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'surname' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'role' => 'required|string|in:admin,manager,user,purchaser',
             'password' => 'required|string|min:6',
@@ -35,6 +36,7 @@ class UserController extends Controller
 
         $user = new User();
         $user->name = $validated['name'];
+        $user->surname = $validated['surname'];
         $user->email = $validated['email'];
         $user->role = $validated['role'];
         $user->password = Hash::make($validated['password']);
@@ -55,6 +57,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'surname' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'role' => 'required|string|in:admin,manager,user,purchaser',
             'avatar' => 'nullable|image|max:8000',
@@ -62,6 +65,7 @@ class UserController extends Controller
         ]);
 
         $user->name = $validated['name'];
+        $user->surname = $validated['surname'];
         $user->email = $validated['email'];
         $user->role = $validated['role'];
 

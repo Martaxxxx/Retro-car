@@ -14,7 +14,6 @@ const UserSettings: React.FC = () => {
     surname: "",
     role: "",
     email: "",
-    login: "",
     password: "",
     current_password: "",
     password_confirmation: "",
@@ -34,7 +33,6 @@ const UserSettings: React.FC = () => {
           surname: parsedUser.surname || "",
           role: parsedUser.roles?.[0] || "",
           email: parsedUser.email || "",
-          login: parsedUser.login || "",
         }));
         setPreview(parsedUser.avatar || "/user.jpg");
       } catch (error) {
@@ -146,16 +144,6 @@ const UserSettings: React.FC = () => {
                       className="form-control"
                       value={editedUser.surname}
                       onChange={(e) => handleFieldChange("surname", e.target.value)}
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <th>Login</th>
-                  <td>
-                    <input
-                      className="form-control"
-                      value={editedUser.login}
-                      onChange={(e) => handleFieldChange("login", e.target.value)}
                     />
                   </td>
                 </tr>

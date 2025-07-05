@@ -4,9 +4,27 @@ import Navbar from "../components/Navbar";
 import { useUser } from "../components/context/UserContext";
 import WheelSpinner from "../components/WheelSpinner";
 import { useNavigate } from "react-router-dom";
-import Select from "react-select";
 
-// Style identyczne jak w Renowacjach!
+interface User {
+  id: number;
+  name: string;
+  surname?: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  created_at: string;
+  roles?: string[];
+}
+
+interface FormDataState {
+  name: string;
+  surname: string;
+  email: string;
+  role: string;
+  password?: string;
+  avatar?: File;
+}
+// Spojne style w select
 const customSelectStyles = {
   control: (base) => ({
     ...base,
@@ -30,32 +48,6 @@ const customSelectStyles = {
     textAlign: "center",       
   }),
 }
-
-const roleOptions = [
-  { value: "admin", label: "Admin" },
-  { value: "manager", label: "Manager" },
-  { value: "user", label: "User" },
-  { value: "purchaser", label: "Purchaser" },
-];
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  avatar?: string;
-  created_at: string;
-  roles?: string[];
-}
-
-interface FormDataState {
-  name: string;
-  email: string;
-  role: string;
-  password?: string;
-  avatar?: File;
-}
-
 const AdminPanel: React.FC = () => {
   const { user: currentUser, setUser } = useUser();
   const navigate = useNavigate();
@@ -68,6 +60,7 @@ const AdminPanel: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<FormDataState>({
     name: "",
+    surname: "",
     email: "",
     role: "user",
     password: "",
@@ -98,6 +91,7 @@ const AdminPanel: React.FC = () => {
     setEditingUser(user);
     setFormData({
       name: user.name,
+      surname: user.surname || "",
       email: user.email,
       role: user.role,
     });
@@ -108,14 +102,14 @@ const AdminPanel: React.FC = () => {
     setEditingUser({ id: 0, name: "", email: "", role: "user", created_at: "" });
     setFormData({
       name: "",
+      surname: "",
       email: "",
       role: "user",
       password: "",
     });
   };
 
-  // (nie potrzebujesz już obsługi <select>, tylko <input>)
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -129,6 +123,7 @@ const AdminPanel: React.FC = () => {
   const buildFormData = () => {
     const data = new FormData();
     data.append("name", formData.name);
+    data.append("surname", formData.surname);
     data.append("email", formData.email);
     data.append("role", formData.role);
     if (formData.password) data.append("password", formData.password);
@@ -206,6 +201,7 @@ const AdminPanel: React.FC = () => {
     return (
       (!filterRole || user.role === filterRole) &&
       (user.name.toLowerCase().includes(term) ||
+        user.surname?.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
         user.role.toLowerCase().includes(term) ||
         user.id.toString().includes(term))
@@ -229,7 +225,7 @@ const AdminPanel: React.FC = () => {
 
         <div className="row mb-3">
           <div className="col-md-6">
-            <input type="text" className="form-control" placeholder="Szukaj (ID, imię, email, rola...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" className="form-control" placeholder="Szukaj (ID, imię, nazwisko, email, rola...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className="col-md-4">
             <select className="form-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
@@ -249,6 +245,7 @@ const AdminPanel: React.FC = () => {
                 <th>ID</th>
                 <th>Avatar</th>
                 <th>Imię</th>
+                <th>Nazwisko</th>
                 <th>Email</th>
                 <th>Rola</th>
                 <th>Utworzony</th>
@@ -263,6 +260,7 @@ const AdminPanel: React.FC = () => {
                     <img src={user.avatar || "/default-avatar.png"} alt="avatar" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                   </td>
                   <td>{user.name}</td>
+                  <td>{user.surname}</td>
                   <td>{user.email}</td>
                   <td>{user.role}</td>
                   <td>{new Date(user.created_at).toLocaleDateString()}</td>
@@ -303,16 +301,14 @@ const AdminPanel: React.FC = () => {
               </div>
               <div className="modal-body">
                 <input type="text" name="name" className="form-control mb-2" placeholder="Imię" value={formData.name} onChange={handleInputChange} />
+                <input type="text" name="surname" className="form-control mb-2" placeholder="Nazwisko" value={formData.surname} onChange={handleInputChange} />
                 <input type="email" name="email" className="form-control mb-2" placeholder="Email" value={formData.email} onChange={handleInputChange} />
-                {/* REACT-SELECT ZAMIENIA <select> */}
-                <Select
-                  styles={customSelectStyles}
-                  options={roleOptions}
-                  value={roleOptions.find(opt => opt.value === formData.role)}
-                  onChange={option => setFormData(prev => ({ ...prev, role: option?.value || "user" }))}
-                  className="mb-2"
-                  placeholder="Rola"
-                />
+                <select name="role" className="form-select mb-2" value={formData.role} onChange={handleInputChange}>
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="user">User</option>
+                  <option value="purchaser">Purchaser</option>
+                </select>
                 <input type="password" name="password" className="form-control mb-2" placeholder="Hasło" onChange={handleInputChange} />
                 <label className="form-label">Zdjęcie</label>
                 <input type="file" name="avatar" className="form-control" onChange={handleFileChange} />

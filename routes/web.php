@@ -31,6 +31,7 @@ Route::middleware(['web', 'auth'])->get('/api/user', function (Request $request)
     return response()->json([
         'id' => $user->id,
         'name' => $user->name,
+        'surname' => $user->surname,
         'email' => $user->email,
         'roles' => [$user->role],
         'avatar' => $user->avatar ?? null,
