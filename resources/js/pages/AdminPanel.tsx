@@ -4,6 +4,39 @@ import Navbar from "../components/Navbar";
 import { useUser } from "../components/context/UserContext";
 import WheelSpinner from "../components/WheelSpinner";
 import { useNavigate } from "react-router-dom";
+import Select from "react-select";
+
+// Style identyczne jak w Renowacjach!
+const customSelectStyles = {
+  control: (base) => ({
+    ...base,
+    backgroundColor: "#fff",
+    borderColor: "#9C2F3B",
+    boxShadow: "none",
+    "&:hover": { borderColor: "#9C2F3B" },
+    textAlign: "center",        
+  }),
+  singleValue: (base) => ({
+    ...base,
+    textAlign: "center",         
+    width: "100%",               
+    margin: 0,
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
+    color: state.isFocused ? "#fff" : "#000",
+    cursor: "pointer",
+    textAlign: "center",       
+  }),
+}
+
+const roleOptions = [
+  { value: "admin", label: "Admin" },
+  { value: "manager", label: "Manager" },
+  { value: "user", label: "User" },
+  { value: "purchaser", label: "Purchaser" },
+];
 
 interface User {
   id: number;
@@ -81,7 +114,8 @@ const AdminPanel: React.FC = () => {
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // (nie potrzebujesz już obsługi <select>, tylko <input>)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -270,12 +304,15 @@ const AdminPanel: React.FC = () => {
               <div className="modal-body">
                 <input type="text" name="name" className="form-control mb-2" placeholder="Imię" value={formData.name} onChange={handleInputChange} />
                 <input type="email" name="email" className="form-control mb-2" placeholder="Email" value={formData.email} onChange={handleInputChange} />
-                <select name="role" className="form-select mb-2" value={formData.role} onChange={handleInputChange}>
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                  <option value="user">User</option>
-                  <option value="purchaser">Purchaser</option>
-                </select>
+                {/* REACT-SELECT ZAMIENIA <select> */}
+                <Select
+                  styles={customSelectStyles}
+                  options={roleOptions}
+                  value={roleOptions.find(opt => opt.value === formData.role)}
+                  onChange={option => setFormData(prev => ({ ...prev, role: option?.value || "user" }))}
+                  className="mb-2"
+                  placeholder="Rola"
+                />
                 <input type="password" name="password" className="form-control mb-2" placeholder="Hasło" onChange={handleInputChange} />
                 <label className="form-label">Zdjęcie</label>
                 <input type="file" name="avatar" className="form-control" onChange={handleFileChange} />
