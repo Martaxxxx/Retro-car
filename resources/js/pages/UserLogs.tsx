@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "../axios";
 import Navbar from "../components/Navbar";
 import WheelSpinner from "../components/WheelSpinner";
-import { useParams, useLocation, Link } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 
 interface LogEntry {
   id: number;
@@ -68,20 +68,16 @@ const UserLogs: React.FC = () => {
     <>
       <Navbar />
       <div className="container mt-5 pt-5">
-        {/* Tekstowy link powrotu na górze */}
-        <Link
-          to="/adminpanel"
-          className="project-breadcrumb"
-          style={{
-            cursor: "pointer",
-            textDecoration: "none",
-            color: "inherit",
-            display: "inline-block",
-            marginBottom: "18px"
-          }}
-        >
-          ← Wróć do listy użytkowników
-        </Link>
+        {/* Link powrotu na górze */}
+        <div className="mb-3">
+          <Link
+            to="/adminpanel"
+            className="btn btn-outline-secondary rounded-pill px-4"
+            style={{ textDecoration: "none", display: "inline-block" }}
+          >
+            ← Wróć do listy użytkowników
+          </Link>
+        </div>
 
         <h3 className="mb-4">Historia logowań – {userNameFromState || "Nieznany użytkownik"}</h3>
 

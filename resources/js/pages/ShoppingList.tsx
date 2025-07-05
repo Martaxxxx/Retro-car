@@ -70,7 +70,7 @@ const ShoppingList: React.FC = () => {
         }
     };
 
-    // USUNIĘTO WALIDACJĘ "Nazwa pozycji jest wymagana!" PODCZAS EDYCJI
+    // WALIDACJA: OKNO SYSTEMOWE ALERT
     const handleUpdate = async (id: string, field: keyof ShoppingItem, value: any) => {
         const itemToUpdate = items.find(item => item.id === id);
         if (!itemToUpdate) return;
@@ -178,7 +178,7 @@ const ShoppingList: React.FC = () => {
       }
 
       if (foundEmptyName) {
-        setShowNameRequiredAlert(true);
+        alert("Nazwa pozycji jest wymagana!");
       }
 
       setItems((prev) => [...prev, ...savedItems]);
@@ -190,48 +190,15 @@ const ShoppingList: React.FC = () => {
         setAddError(null);
     };
 
-   // ...wszystkie Twoje importy i kod powyżej bez zmian...
-
-const handleRemoveItem = async (id: string) => {
-    // SYSTEMOWY POPUP
-    const confirmed = window.confirm("Czy na pewno chcesz usunąć tę pozycję z listy zakupów?");
-    if (!confirmed) return;
-    try {
-        await axios.delete(`/shopping-items/${id}`);
-        setItems(prev => prev.filter(item => item.id !== id));
-    } catch (error) {}
-};
-
-// ...reszta kodu bez zmian...
-
-<ShoppingListTable
-    items={[
-      ...items,
-      ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
-    ]}
-
-    updateItem={(id, field, value) => {
-        if (String(id).startsWith("local-new-")) {
-            const index = parseInt(id.replace("local-new-", ""));
-            handleLocalNewRowChange(index, field as keyof LocalNewRow, value);
-        } else {
-            handleUpdate(id, field, value);
-        }
-    }}
-
-    editMode={editMode}
-    removeItem={id => {
-        if (String(id).startsWith("local-new-")) {
-            const index = parseInt(id.replace("local-new-", ""));
-            setLocalNewRows(prev => prev.filter((_, i) => i !== index));
-        } else {
-            handleRemoveItem(id); 
-        }
-    }}
-
-    isLocalNewRow={id => String(id).startsWith("local-new-")}
-    onLoadInvoices={loadInvoicesForItem}
-/>
+    // SYSTEMOWY POPUP OKNA
+    const handleRemoveItem = async (id: string) => {
+        const confirmed = window.confirm("Czy na pewno chcesz usunąć tę pozycję z listy zakupów?");
+        if (!confirmed) return;
+        try {
+            await axios.delete(`/shopping-items/${id}`);
+            setItems(prev => prev.filter(item => item.id !== id));
+        } catch (error) {}
+    };
 
     const totalNet = items.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
     const totalGross = items.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
@@ -242,13 +209,13 @@ const handleRemoveItem = async (id: string) => {
     };
 
     const handleSaveEdit = async () => {
-      // Walidacja: pokaż alert przy pustej nazwie w którymkolwiek wierszu!
+      // Walidacja: okno systemowe przy pustej nazwie!
       const hasEmptyName = [
         ...items,
         ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
       ].some(item => !item.name || item.name.trim() === "");
       if (hasEmptyName) {
-        setShowNameRequiredAlert(true);
+        alert("Nazwa pozycji jest wymagana!");
         return;
       }
       await handleSaveAllNewRows();
