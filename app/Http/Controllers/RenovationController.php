@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Renovation;
+use App\Models\Project;
 use Illuminate\Http\Request;
 
 class RenovationController extends Controller
 {
+    // Zwraca WSZYSTKIE projekty z tabeli 'projects'
     public function index()
     {
-        return Renovation::all();
+        return response()->json(Project::all());
     }
 
+    // Dodaje nowy projekt do tabeli 'projects'
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -24,24 +26,26 @@ class RenovationController extends Controller
             'user_id' => 'required|exists:users,id'
         ]);
 
-        return Renovation::create($validated);
+        return Project::create($validated);
     }
 
-    public function show(Renovation $renovation)
+    // Pokazuje pojedynczy projekt
+    public function show(Project $project)
     {
-        return $renovation;
+        return response()->json($project);
     }
 
-    public function update(Request $request, Renovation $renovation)
+    // Aktualizuje projekt
+    public function update(Request $request, Project $project)
     {
-        $renovation->update($request->all());
-        return $renovation;
+        $project->update($request->all());
+        return response()->json($project);
     }
 
-    public function destroy(Renovation $renovation)
+    // Usuwa projekt
+    public function destroy(Project $project)
     {
-        $renovation->delete();
+        $project->delete();
         return response()->noContent();
     }
 }
-

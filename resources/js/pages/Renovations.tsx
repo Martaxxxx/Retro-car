@@ -3,10 +3,8 @@ import Navbar from "../components/Navbar";
 import "rc-slider/assets/index.css";
 import Slider from "rc-slider";
 import axios from "axios";
-import { projectMap } from "../pages/projectData";
-import { useNavigate } from "react-router-dom";
 import Select from "react-select";
-import { useProjectContext } from "../components/context/ProjectContext";
+import { useNavigate } from "react-router-dom";
 
 interface Project {
     id: string;
@@ -14,8 +12,9 @@ interface Project {
     brand: string;
     year: number;
     status: string;
-    endDate: string;
+    end_date?: string;
     image?: string;
+    user_id?: string;
 }
 
 const sortOptions = [
@@ -50,53 +49,61 @@ const customSelectStyles = {
 };
 
 const Renovations: React.FC = () => {
-    const { projects: dynamicProjects } = useProjectContext();
     const navigate = useNavigate();
-
-
-    const [apiProjects, setApiProjects] = useState([]);
-
-    useEffect(() => {
-        axios.get("/api/renovations")
-            .then(response => setApiProjects(response.data))
-            .catch(error => console.error("Błąd pobierania danych z API:", error));
-    }, []);
-
-    const allProjects: Project[] = [
-        ...Object.values(projectMap),
-        ...dynamicProjects.filter((dp) => !projectMap[dp.id])
-    ];
-    const allBrands = Array.from(new Set(allProjects.map(p => p.brand)));
-    const brandOptions = allBrands.map(brand => ({ value: brand, label: brand }));
-
-    const currentYear = new Date().getFullYear();
-    const allYears = allProjects.map(p => p.year);
-    const initialYearMin = Math.max(1885, Math.min(...allYears));
-    const initialYearMax = Math.min(currentYear, Math.max(...allYears));
-
+    const [allProjects, setAllProjects] = useState<Project[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [brandFilter, setBrandFilter] = useState("");
     const [sortBy, setSortBy] = useState("");
     const [onlyMine, setOnlyMine] = useState(false);
     const [showFilters, setShowFilters] = useState(true);
-    const [yearMin, setYearMin] = useState(initialYearMin);
-    const [yearMax, setYearMax] = useState(initialYearMax);
+
+    // Zakres roczników na podstawie danych z bazy (nie zmienia się po przesuwaniu suwaka)
+    const [yearRange, setYearRange] = useState<[number, number]>([1885, new Date().getFullYear()]);
+    // Wybrane przez użytkownika wartości suwaka (zmieniają się natychmiast)
+    const [selectedYear, setSelectedYear] = useState<[number, number]>([1885, new Date().getFullYear()]);
+
     const [visibleCount, setVisibleCount] = useState(10);
+    const [userId, setUserId] = useState<string | null>(null);
+
+    useEffect(() => {
+        axios.get("/renovations")
+            .then(response => {
+                const projects = Array.isArray(response.data) ? response.data : [];
+                setAllProjects(projects);
+
+                if (projects.length > 0) {
+                    const years = projects.map((p: Project) => Number(p.year));
+                    const minYear = Math.max(1885, Math.min(...years));
+                    const maxYear = Math.min(new Date().getFullYear(), Math.max(...years));
+                    setYearRange([minYear, maxYear]);
+                    setSelectedYear([minYear, maxYear]);
+                }
+            })
+            .catch(error => console.error("Błąd pobierania danych z API:", error));
+
+        axios.get("/api/user")
+            .then(res => setUserId(res.data.id))
+            .catch(() => setUserId(null));
+    }, []);
+
+    const allBrands = Array.from(new Set(allProjects.map(p => p.brand))).filter(Boolean);
+    const brandOptions = allBrands.map(brand => ({ value: brand, label: brand }));
 
     const filteredProjects = allProjects
-        .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()))
         .filter(p => (statusFilter ? p.status === statusFilter : true))
         .filter(p => (brandFilter ? p.brand === brandFilter : true))
-        .filter(p => p.year >= yearMin && p.year <= yearMax)
+        .filter(p => Number(p.year) >= selectedYear[0] && Number(p.year) <= selectedYear[1])
+        .filter(p => !onlyMine || (userId && p.user_id === userId))
         .sort((a, b) => {
             switch (sortBy) {
                 case "name-asc": return a.name.localeCompare(b.name);
                 case "name-desc": return b.name.localeCompare(a.name);
-                case "year-asc": return a.year - b.year;
-                case "year-desc": return b.year - a.year;
-                case "updated-newest": return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
-                case "updated-oldest": return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+                case "year-asc": return Number(a.year) - Number(b.year);
+                case "year-desc": return Number(b.year) - Number(a.year);
+                case "updated-newest": return new Date(b.end_date ?? "").getTime() - new Date(a.end_date ?? "").getTime();
+                case "updated-oldest": return new Date(a.end_date ?? "").getTime() - new Date(b.end_date ?? "").getTime();
                 default: return 0;
             }
         });
@@ -108,13 +115,11 @@ const Renovations: React.FC = () => {
             <Navbar />
             <div className="container mt-5 pt-5">
                 <h2 className="mb-4 text-center">Renowacje</h2>
-
                 <div className="mb-3 text-start">
                     <button className="btn btn-danger" onClick={() => setShowFilters(!showFilters)}>
                         Filtruj wyszukiwanie {showFilters ? "▲" : "▼"}
                     </button>
                 </div>
-
                 {showFilters && (
                     <div className="card mb-4 p-4">
                         <div className="row g-3 align-items-end">
@@ -159,7 +164,6 @@ const Renovations: React.FC = () => {
                                 />
                             </div>
                         </div>
-
                         <div className="row g-3 mt-4">
                             <div className="col-md-6">
                                 <div className="card p-3">
@@ -167,13 +171,12 @@ const Renovations: React.FC = () => {
                                     <Slider
                                         range
                                         allowCross={false}
-                                        min={initialYearMin}
-                                        max={initialYearMax}
-                                        value={[yearMin, yearMax]}
-                                        onChange={(value) => {
+                                        min={yearRange[0]}
+                                        max={yearRange[1]}
+                                        value={selectedYear}
+                                        onChange={value => {
                                             if (Array.isArray(value)) {
-                                                setYearMin(value[0]);
-                                                setYearMax(value[1]);
+                                                setSelectedYear([value[0], value[1]]);
                                             }
                                         }}
                                         trackStyle={[{ backgroundColor: "#9C2F3B", height: 6 }]}
@@ -187,18 +190,24 @@ const Renovations: React.FC = () => {
                                         <input
                                             type="number"
                                             className="form-control"
-                                            value={yearMin}
-                                            min={1885}
-                                            max={currentYear}
-                                            onChange={e => setYearMin(Number(e.target.value))}
+                                            value={selectedYear[0]}
+                                            min={yearRange[0]}
+                                            max={selectedYear[1]}
+                                            onChange={e => {
+                                                const newMin = Number(e.target.value);
+                                                setSelectedYear([newMin, Math.max(newMin, selectedYear[1])]);
+                                            }}
                                         />
                                         <input
                                             type="number"
                                             className="form-control"
-                                            value={yearMax}
-                                            min={1885}
-                                            max={currentYear}
-                                            onChange={e => setYearMax(Number(e.target.value))}
+                                            value={selectedYear[1]}
+                                            min={selectedYear[0]}
+                                            max={yearRange[1]}
+                                            onChange={e => {
+                                                const newMax = Number(e.target.value);
+                                                setSelectedYear([Math.min(selectedYear[0], newMax), newMax]);
+                                            }}
                                         />
                                     </div>
                                 </div>
@@ -220,10 +229,9 @@ const Renovations: React.FC = () => {
                         </div>
                     </div>
                 )}
-
                 <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
-                    {filteredProjects.slice(0, visibleCount).map((project, index) => (
-                        <div className="col" key={index}>
+                    {filteredProjects.slice(0, visibleCount).map((project) => (
+                        <div className="col" key={project.id}>
                             <div
                                 className="card h-100 shadow"
                                 onClick={() => navigate(`/projectdetails/${project.id}/${encodeURIComponent(project.name)}`)}
@@ -246,23 +254,11 @@ const Renovations: React.FC = () => {
                                         <br />
                                         Status: {project.status}
                                     </p>
-                                    <div className="progress">
-                                        <div
-                                            className="progress-bar"
-                                            role="progressbar"
-                                            style={{ width: `70%`, backgroundColor: "#9C2F3B" }}
-                                            aria-valuemin={0}
-                                            aria-valuemax={100}
-                                        >
-                                            70%
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
-
                 {visibleCount < filteredProjects.length && (
                     <div className="mt-4 text-center">
                         <button className="btn btn-outline-secondary" onClick={handleLoadMore}>
@@ -270,7 +266,6 @@ const Renovations: React.FC = () => {
                         </button>
                     </div>
                 )}
-
                 {filteredProjects.length === 0 && <p className="text-center">Brak wyników.</p>}
             </div>
         </>

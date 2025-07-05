@@ -77,6 +77,7 @@ const PartsTable: React.FC<Props> = ({
   const [selectAll, setSelectAll] = useState(false);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const addRowButtonRef = useRef<HTMLButtonElement>(null);
   const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
@@ -90,7 +91,16 @@ const PartsTable: React.FC<Props> = ({
   const itemsPerPage = 25;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filtered parts - need to define before paginatedParts
+  // Scroll to "Dodaj wiersz" button when entering editMode
+  useEffect(() => {
+    if (editMode && addRowButtonRef.current) {
+      setTimeout(() => {
+        addRowButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [editMode]);
+
+  // Filtered parts
   const filteredParts = parts.filter(
     (part) =>
       (part.partCode ?? "").toLowerCase().includes(filters.partCode.toLowerCase()) &&
@@ -176,15 +186,16 @@ const PartsTable: React.FC<Props> = ({
       });
     }, 100);
     return () => clearTimeout(timeout);
-  // kluczowe: paginatedParts i isQRCodeReady
   }, [paginatedParts, isQRCodeReady, projectName]);
 
   const handleFilterChange = (field: keyof typeof filters, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-    setCurrentPage(1); // Po zmianie filtra wracamy na pierwszą stronę
+    setCurrentPage(1);
   };
 
+  // Dodawanie wiersza tylko w trybie edycji
   const handleAddPart = () => {
+    if (!editMode) return;
     const brandLetter = projectName.charAt(0).toUpperCase() || "X";
     const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
     const nextNumber = String(parts.length + 1).padStart(3, "0");
@@ -228,6 +239,11 @@ const PartsTable: React.FC<Props> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expandedNoteId]);
+
+  // Pokaż tylko wiersze z nazwą jeśli nie editMode
+  const visibleParts = paginatedParts.filter(
+    (part) => editMode || (part.name && part.name.trim() !== "")
+  );
 
   return (
     <div ref={tableRef}>
@@ -312,7 +328,7 @@ const PartsTable: React.FC<Props> = ({
           )}
         </thead>
         <tbody>
-          {paginatedParts.map(part => (
+          {visibleParts.map(part => (
             <tr key={part.id}>
               <td>
                 <input
@@ -439,6 +455,27 @@ const PartsTable: React.FC<Props> = ({
         </tbody>
       </table>
 
+      {editMode && (
+        <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 px-2">
+          <button
+            className="btn btn-custom"
+            onClick={handleAddPart}
+            ref={addRowButtonRef}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+            Dodaj wiersz
+          </button>
+          <button
+            className="btn btn-custom"
+            onClick={() => {
+              onEndEdit?.();
+            }}
+          >
+            Zapisz zmiany
+          </button>
+        </div>
+      )}
+
       {!editMode && totalPages > 1 && (
         <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">
           <span
@@ -474,20 +511,6 @@ const PartsTable: React.FC<Props> = ({
           </span>
         </div>
       )}
-      <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 px-2">
-        <button className="btn btn-custom" onClick={handleAddPart}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>Dodaj wiersz
-        </button>
-        <button
-          className="btn btn-custom"
-          onClick={() => {
-            onEndEdit?.();
-            // window.dispatchEvent(new Event("notifications:update")); // <-- Usunięte! Powiadomienie robimy w rodzicu po sukcesie
-          }}
-        >
-          Zapisz zmiany
-        </button>
-      </div>
 
       {selectedQR && <QRCodeModal qrData={selectedQR} onClose={() => setSelectedQR(null)} />}
       {noteModalContent && (

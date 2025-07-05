@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from "react";
+import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
 import { FaFilter, FaPaperclip } from "react-icons/fa";
 import Select from "react-select";
 import axios from "../axios";
@@ -78,8 +78,17 @@ const ShoppingListTable: React.FC<Props> = ({
     const [showFilters, setShowFilters] = useState(false);
     const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    // NEW: local editing state for names
     const [editingNames, setEditingNames] = useState<Record<string, string>>({});
+    const addRowButtonRef = useRef<HTMLButtonElement>(null);
+
+    // Scroll to "Dodaj wiersz" button when entering editMode
+    useEffect(() => {
+        if (editMode && addRowButtonRef.current) {
+            setTimeout(() => {
+                addRowButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 100);
+        }
+    }, [editMode]);
 
     // Pliki do modala: backend + lokalne
     const getAllFilesForModal = (item: ShoppingItem) => {
@@ -99,7 +108,6 @@ const ShoppingListTable: React.FC<Props> = ({
         return [...backendFiles, ...localFiles];
     };
 
-    // Obsługa plików
     const handleFileChange = (id: string, files: FileList | null) => {
         if (!files) return;
         const newFiles = Array.from(files);
@@ -124,7 +132,6 @@ const ShoppingListTable: React.FC<Props> = ({
         const updated = Array.isArray(item.invoices) ? [...item.invoices] : [];
         const fileToRemove = updated[index];
 
-        // Jeśli to backendowy plik – ma ID
         if (fileToRemove && typeof fileToRemove === "object" && "id" in fileToRemove && fileToRemove.id) {
             try {
                 await axios.delete(`/shopping-items/files/${fileToRemove.id}`);
@@ -145,7 +152,7 @@ const ShoppingListTable: React.FC<Props> = ({
         value: string
     ) => {
         setFilters((prev) => ({ ...prev, [field]: value }));
-        setCurrentPage(1); // Resetuj na pierwszą stronę po zmianie filtrów
+        setCurrentPage(1);
     };
 
     const filteredItems = items.filter((item) => {
@@ -170,22 +177,21 @@ const ShoppingListTable: React.FC<Props> = ({
         currentPage * itemsPerPage
     );
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (currentPage > totalPages && totalPages > 0) {
             setCurrentPage(1);
         }
     }, [filters, totalPages]);
 
+    // Pokazuj tylko wiersze z nazwą jeśli nie editMode (czyli puste nowe wiersze tylko w edycji)
+    const visibleItems = paginatedItems.filter(
+        (item) => editMode || (item.name && item.name.trim() !== "")
+    );
+
     return (
         <div>
             <div className="d-flex align-items-center mb-3 gap-2">
-                <span
-                    style={{
-                        fontWeight: "bold",
-                        fontSize: "1.3rem",
-                        color: "#333",
-                    }}
-                >
+                <span style={{ fontWeight: "bold", fontSize: "1.3rem", color: "#333" }}>
                     Filtr
                 </span>
                 <FaFilter
@@ -277,7 +283,7 @@ const ShoppingListTable: React.FC<Props> = ({
                         )}
                     </thead>
                     <tbody>
-                        {paginatedItems.map((item) => (
+                        {visibleItems.map((item) => (
                             <tr
                                 key={item.id}
                                 style={
@@ -301,7 +307,6 @@ const ShoppingListTable: React.FC<Props> = ({
                                                     setEditingNames(ed => ({ ...ed, [item.id]: item.name ?? "" }));
                                                     return;
                                                 }
-                                                // Przekaż zmianę do parenta tylko jeśli nie jest pusta
                                                 updateItem(item.id, "name", value);
                                             }}
                                             placeholder="Nazwa (wymagana)"
@@ -519,7 +524,30 @@ const ShoppingListTable: React.FC<Props> = ({
                 </table>
             </div>
 
-            {/* PAGINACJA STRZAŁKAMI */}
+            {/* Przycisk dodawania wiersza i przewijanie do niego */}
+            {editMode && (
+                <div className="d-flex justify-content-end align-items-center mt-3 flex-wrap gap-2 px-2">
+                    <button
+                        className="btn btn-custom"
+                        ref={addRowButtonRef}
+                        onClick={() => {
+                            const newId = `temp-${Date.now()}`;
+                            updateItem(newId, "name", "");
+                            updateItem(newId, "notes", "");
+                            updateItem(newId, "priceNet", 0);
+                            updateItem(newId, "priceGross", 0);
+                            updateItem(newId, "status", "dozamowienia");
+                            updateItem(newId, "link", "");
+                            updateItem(newId, "invoiceAttached", false);
+                            updateItem(newId, "invoices", []);
+                        }}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                        Dodaj wiersz
+                    </button>
+                </div>
+            )}
+
             {totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">
                     <span
