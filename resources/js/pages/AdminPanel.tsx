@@ -4,6 +4,38 @@ import Navbar from "../components/Navbar";
 import { useUser } from "../components/context/UserContext";
 import WheelSpinner from "../components/WheelSpinner";
 import { useNavigate } from "react-router-dom";
+import Select from "react-select";
+
+const customSelectStyles = {
+  control: (base: any) => ({
+    ...base,
+    backgroundColor: "#fff",
+    borderColor: "#9C2F3B",
+    boxShadow: "none",
+    "&:hover": { borderColor: "#9C2F3B" },
+    textAlign: "center",
+  }),
+  singleValue: (base: any) => ({
+    ...base,
+    textAlign: "center",
+    width: "100%",
+    margin: 0,
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
+    color: state.isFocused ? "#fff" : "#000",
+    cursor: "pointer",
+    textAlign: "center",
+  }),
+};
+
+const roleOptions = [
+  { value: "admin", label: "Admin" },
+  { value: "manager", label: "Manager" },
+  { value: "user", label: "User" },
+  { value: "purchaser", label: "Purchaser" }
+];
 
 interface User {
   id: number;
@@ -24,30 +56,7 @@ interface FormDataState {
   password?: string;
   avatar?: File;
 }
-// Spojne style w select
-const customSelectStyles = {
-  control: (base) => ({
-    ...base,
-    backgroundColor: "#fff",
-    borderColor: "#9C2F3B",
-    boxShadow: "none",
-    "&:hover": { borderColor: "#9C2F3B" },
-    textAlign: "center",        
-  }),
-  singleValue: (base) => ({
-    ...base,
-    textAlign: "center",         
-    width: "100%",               
-    margin: 0,
-  }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
-    color: state.isFocused ? "#fff" : "#000",
-    cursor: "pointer",
-    textAlign: "center",       
-  }),
-}
+
 const AdminPanel: React.FC = () => {
   const { user: currentUser, setUser } = useUser();
   const navigate = useNavigate();
@@ -62,7 +71,7 @@ const AdminPanel: React.FC = () => {
     name: "",
     surname: "",
     email: "",
-    role: "user",
+    role: "",
     password: "",
   });
   const [isCreating, setIsCreating] = useState(false);
@@ -104,14 +113,18 @@ const AdminPanel: React.FC = () => {
       name: "",
       surname: "",
       email: "",
-      role: "user",
+      role: "",
       password: "",
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (option: any) => {
+    setFormData((prev) => ({ ...prev, role: option ? option.value : "" }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,6 +147,7 @@ const AdminPanel: React.FC = () => {
   const handleCreate = async () => {
     try {
       setIsSaving(true);
+      console.log("Tworzony user:", formData);
       const data = buildFormData();
       await axios.post("/api/users", data, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -142,8 +156,18 @@ const AdminPanel: React.FC = () => {
       fetchUsers();
       alert("Zmiany zapisane pomyślnie.");
     } catch (err: any) {
-      console.error("Błąd tworzenia użytkownika:", err);
-      alert("Błąd tworzenia użytkownika");
+      if (err.response?.data?.errors) {
+        console.error("Błąd walidacji:", err.response.data.errors);
+        alert(
+          "Błąd tworzenia użytkownika:\n" +
+            Object.entries(err.response.data.errors)
+              .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+              .join("\n")
+        );
+      } else {
+        console.error("Błąd tworzenia użytkownika:", err);
+        alert("Błąd tworzenia użytkownika");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -178,8 +202,18 @@ const AdminPanel: React.FC = () => {
 
       alert("Zmiany zapisane pomyślnie.");
     } catch (err: any) {
-      console.error("Błąd zapisu zmian:", err);
-      alert("Błąd zapisu zmian");
+      if (err.response?.data?.errors) {
+        console.error("Błąd walidacji:", err.response.data.errors);
+        alert(
+          "Błąd zapisu zmian:\n" +
+            Object.entries(err.response.data.errors)
+              .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+              .join("\n")
+        );
+      } else {
+        console.error("Błąd zapisu zmian:", err);
+        alert("Błąd zapisu zmian");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -303,19 +337,27 @@ const AdminPanel: React.FC = () => {
                 <input type="text" name="name" className="form-control mb-2" placeholder="Imię" value={formData.name} onChange={handleInputChange} />
                 <input type="text" name="surname" className="form-control mb-2" placeholder="Nazwisko" value={formData.surname} onChange={handleInputChange} />
                 <input type="email" name="email" className="form-control mb-2" placeholder="Email" value={formData.email} onChange={handleInputChange} />
-                <select name="role" className="form-select mb-2" value={formData.role} onChange={handleInputChange}>
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                  <option value="user">User</option>
-                  <option value="purchaser">Purchaser</option>
-                </select>
+                <div className="mb-2">
+                  <Select
+                    value={roleOptions.find(opt => opt.value === formData.role)}
+                    onChange={handleRoleChange}
+                    options={roleOptions}
+                    styles={customSelectStyles}
+                    placeholder="Wybierz rolę..."
+                    isClearable={true}
+                  />
+                </div>
                 <input type="password" name="password" className="form-control mb-2" placeholder="Hasło" onChange={handleInputChange} />
                 <label className="form-label">Zdjęcie</label>
                 <input type="file" name="avatar" className="form-control" onChange={handleFileChange} />
               </div>
               <div className="modal-footer d-flex flex-column align-items-center gap-2">
-                <button className="btn btn-secondary w-75" onClick={() => setEditingUser(null)}>Anuluj</button>
-                <button className="btn btn-primary w-75" onClick={isCreating ? handleCreate : handleUpdate}>Zapisz</button>
+                <button className="btn btn-secondary w-75" onClick={() => setEditingUser(null)}>
+                  Anuluj
+                </button>
+                <button className="btn btn-primary w-75" onClick={isCreating ? handleCreate : handleUpdate}>
+                  Zapisz
+                </button>
               </div>
             </div>
           </div>

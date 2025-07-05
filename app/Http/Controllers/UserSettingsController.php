@@ -13,7 +13,7 @@ class UserSettingsController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'avatar' => 'nullable|file|image|max:2048', // max 2MB
+            'avatar' => 'nullable|file|image|max:5000', 
             'name' => 'nullable|string|max:255',
             'surname' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
@@ -21,7 +21,7 @@ class UserSettingsController extends Controller
             'password' => 'nullable|string|min:6|confirmed',
         ]);
 
-        // 📸 Obsługa avatara (jeśli przesłano plik)
+        //  Obsługa avatara (jeśli przesłano plik)
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
