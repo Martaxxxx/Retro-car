@@ -106,6 +106,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
     Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
 });
+// Dostęp do panelu zarządzania tylko dla managera
+Route::middleware(['auth', \App\Http\Middleware\IsManager::class])->group(function () {
+    Route::get('/zarzadzanie', function () {
+        return view('app');
+    });
+});
 
 // SPA fallback – React (wszystko inne)
 Route::get('/{any}', function () {

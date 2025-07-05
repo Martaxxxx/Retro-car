@@ -6,6 +6,7 @@ import NotificationBell from "./NotificationBell";
 import { useUser } from "../components/context/UserContext";
 import axios from "axios";
 
+// ----- Styled Components definitions -----
 const NavbarContainer = styled.div`
   width: 100%;
   height: 72px;
@@ -285,6 +286,7 @@ export const Navbar = () => {
     setShowRenowacjeSuggestion(false);
   };
 
+  // --- RENDER ---
   return (
     <NavbarContainer>
       <Logo src="/retro2.png" alt="Logo" />
@@ -293,11 +295,13 @@ export const Navbar = () => {
         <StyledRouterLink to="/" end>Strona główna</StyledRouterLink>
         <StyledRouterLink to="/renowacje">Renowacje</StyledRouterLink>
         <StyledRouterLink to="/raporty">Raporty</StyledRouterLink>
+        {/* Zarządzanie: manager lub admin */}
+        {(user?.roles?.includes("manager") || user?.roles?.includes("admin")) && (
+          <StyledRouterLink to="/zarządzanie">Zarządzanie</StyledRouterLink>
+        )}
+        {/* Admin: tylko admin */}
         {user?.roles?.includes("admin") && (
-          <>
-            <StyledRouterLink to="/zarządzanie">Zarządzanie</StyledRouterLink>
-            <StyledRouterLink to="/adminpanel">Admin</StyledRouterLink>
-          </>
+          <StyledRouterLink to="/adminpanel">Admin</StyledRouterLink>
         )}
       </NavLinks>
 

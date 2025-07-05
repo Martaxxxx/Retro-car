@@ -25,6 +25,9 @@ const ShoppingList: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [fallbackProject, setFallbackProject] = useState<ProjectData | null>(null);
 
+    // NEW: Alert for required name
+    const [showNameRequiredAlert, setShowNameRequiredAlert] = useState(false);
+
     // REF for the "Dodaj" button to enable scrollIntoView!
     const addButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -111,7 +114,7 @@ const ShoppingList: React.FC = () => {
             setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
         } catch (error: any) {
             if (error.response?.data?.errors?.name) {
-                alert("Błąd: " + error.response.data.errors.name.join(", "));
+                alert("Nazwa pozycji jest wymagana!");
             }
         }
     };
@@ -143,10 +146,11 @@ const ShoppingList: React.FC = () => {
 
     const handleSaveAllNewRows = async () => {
       const savedItems: ShoppingItem[] = [];
+      let foundEmptyName = false;
 
       for (const newRow of localNewRows) {
         if (!newRow.name || newRow.name.trim() === "") {
-          console.warn("Pominięto pusty wiersz bez nazwy");
+          foundEmptyName = true;
           continue;
         }
 
@@ -173,6 +177,10 @@ const ShoppingList: React.FC = () => {
         }
       }
 
+      if (foundEmptyName) {
+        setShowNameRequiredAlert(true);
+      }
+
       setItems((prev) => [...prev, ...savedItems]);
       setLocalNewRows([]);
     };
@@ -182,12 +190,48 @@ const ShoppingList: React.FC = () => {
         setAddError(null);
     };
 
-    const handleRemoveItem = async (id: string) => {
-        try {
-            await axios.delete(`/shopping-items/${id}`);
-            setItems(prev => prev.filter(item => item.id !== id));
-        } catch (error) {}
-    };
+   // ...wszystkie Twoje importy i kod powyżej bez zmian...
+
+const handleRemoveItem = async (id: string) => {
+    // SYSTEMOWY POPUP
+    const confirmed = window.confirm("Czy na pewno chcesz usunąć tę pozycję z listy zakupów?");
+    if (!confirmed) return;
+    try {
+        await axios.delete(`/shopping-items/${id}`);
+        setItems(prev => prev.filter(item => item.id !== id));
+    } catch (error) {}
+};
+
+// ...reszta kodu bez zmian...
+
+<ShoppingListTable
+    items={[
+      ...items,
+      ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
+    ]}
+
+    updateItem={(id, field, value) => {
+        if (String(id).startsWith("local-new-")) {
+            const index = parseInt(id.replace("local-new-", ""));
+            handleLocalNewRowChange(index, field as keyof LocalNewRow, value);
+        } else {
+            handleUpdate(id, field, value);
+        }
+    }}
+
+    editMode={editMode}
+    removeItem={id => {
+        if (String(id).startsWith("local-new-")) {
+            const index = parseInt(id.replace("local-new-", ""));
+            setLocalNewRows(prev => prev.filter((_, i) => i !== index));
+        } else {
+            handleRemoveItem(id); 
+        }
+    }}
+
+    isLocalNewRow={id => String(id).startsWith("local-new-")}
+    onLoadInvoices={loadInvoicesForItem}
+/>
 
     const totalNet = items.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
     const totalGross = items.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
@@ -198,6 +242,15 @@ const ShoppingList: React.FC = () => {
     };
 
     const handleSaveEdit = async () => {
+      // Walidacja: pokaż alert przy pustej nazwie w którymkolwiek wierszu!
+      const hasEmptyName = [
+        ...items,
+        ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
+      ].some(item => !item.name || item.name.trim() === "");
+      if (hasEmptyName) {
+        setShowNameRequiredAlert(true);
+        return;
+      }
       await handleSaveAllNewRows();
       setEditMode(false);
     };
@@ -210,6 +263,14 @@ const ShoppingList: React.FC = () => {
             }, 100);
         }
     }, [editMode]);
+
+    // Automatyczne znikanie alertu po 3,5s – opcjonalnie
+    useEffect(() => {
+      if (showNameRequiredAlert) {
+        const t = setTimeout(() => setShowNameRequiredAlert(false), 3500);
+        return () => clearTimeout(t);
+      }
+    }, [showNameRequiredAlert]);
 
     if (!project || loading) {
         return (
@@ -226,6 +287,40 @@ const ShoppingList: React.FC = () => {
         <>
             <Navbar />
             <div className="container mt-5 pt-5">
+
+                {/* ALERT NA GÓRZE */}
+                {showNameRequiredAlert && (
+                  <div style={{
+                    position: "sticky",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    background: "#d32f2f",
+                    color: "#fff",
+                    padding: "16px",
+                    textAlign: "center",
+                    fontWeight: "bold",
+                    zIndex: 2000
+                  }}>
+                    Nazwa jest wymagana w każdym wierszu!
+                    <button
+                      style={{
+                        marginLeft: 20,
+                        padding: "4px 16px",
+                        border: "none",
+                        borderRadius: 4,
+                        background: "#fff",
+                        color: "#d32f2f",
+                        fontWeight: "bold",
+                        cursor: "pointer"
+                      }}
+                      onClick={() => setShowNameRequiredAlert(false)}
+                    >
+                      OK
+                    </button>
+                  </div>
+                )}
+
                 <Link
                     to={`/projectdetails/${projectId}/${encodeURIComponent(project.name)}`}
                     className="project-breadcrumb"
