@@ -1,8 +1,9 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import styled from "styled-components";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useProjectContext } from "../components/context/ProjectContext";
+import axios from "../axios";
+import { useUser } from "../components/context/UserContext";
 
 const Container = styled.div`
   padding: 40px 20px;
@@ -31,7 +32,6 @@ const ArrowButton = styled.button`
   cursor: pointer;
   transition: transform 0.2s;
   padding: 4px;
-
   &:hover {
     transform: scale(1.2);
   }
@@ -114,10 +114,52 @@ const Progress = styled.div<{ $progress: number }>`
   transition: width 0.3s;
 `;
 
+const SLIDES_PER_PAGE = 5;
+
 const ProjectSlider: React.FC = () => {
-  const { projects } = useProjectContext();
+  const [projects, setProjects] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   const sliderRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Dodaj sprawdzanie zalogowania
+  const { user } = useUser();
+
+  // Poprawiony efekt: czyść projekty przy każdej zmianie zalogowanego usera!
+  useEffect(() => {
+    setProjects([]);
+    setPage(1);
+    setHasMore(true);
+
+    if (user) {
+      loadProjects(1, true);
+    }
+    // eslint-disable-next-line
+  }, [user]);
+
+  // Dodaj parametr "reset" by nie dublować projektów gdy resetujemy
+  const loadProjects = async (pageToLoad: number, reset: boolean = false) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const res = await axios.get(`/projects?page=${pageToLoad}&per_page=${SLIDES_PER_PAGE}`);
+      const newProjects = res.data.data || res.data;
+
+      setProjects(prev => {
+        if (reset) return newProjects; // Załaduj od nowa przy zmianie usera
+        // Nie dublujemy projektów!
+        const ids = new Set(prev.map(p => p.id));
+        return [...prev, ...newProjects.filter(np => !ids.has(np.id))];
+      });
+      setHasMore(!!res.data.next_page_url || (newProjects.length === SLIDES_PER_PAGE));
+      setPage(pageToLoad);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const scroll = (dir: "left" | "right") => {
     if (sliderRef.current) {
@@ -125,6 +167,18 @@ const ProjectSlider: React.FC = () => {
         left: dir === "left" ? -300 : 300,
         behavior: "smooth",
       });
+      if (dir === "right") {
+        const slider = sliderRef.current;
+        setTimeout(() => {
+          if (
+            slider.scrollLeft + slider.clientWidth >= slider.scrollWidth - 10 &&
+            hasMore &&
+            !loading
+          ) {
+            loadProjects(page + 1);
+          }
+        }, 350);
+      }
     }
   };
 
@@ -132,6 +186,11 @@ const ProjectSlider: React.FC = () => {
     const encodedName = encodeURIComponent(name);
     navigate(`/projectdetails/${id}/${encodedName}`);
   };
+
+  // Jeśli user nie jest zalogowany, nie pokazuj nic (lub np. komunikat)
+  if (!user) {
+    return null; // lub: return <Container><Header>Musisz być zalogowany, by zobaczyć projekty.</Header></Container>
+  }
 
   return (
     <Container>
@@ -154,6 +213,15 @@ const ProjectSlider: React.FC = () => {
               </ProgressBar>
             </SlideCard>
           ))}
+          {loading && (
+            <SlideCard>
+              <PlaceholderBox />
+              <Title>Ładowanie...</Title>
+              <ProgressBar>
+                <Progress $progress={100} />
+              </ProgressBar>
+            </SlideCard>
+          )}
         </SliderWrapper>
         <ArrowButton onClick={() => scroll("right")}>
           <ChevronRight />
