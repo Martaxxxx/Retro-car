@@ -79,13 +79,13 @@ const ShoppingListTable: React.FC<Props> = ({
     const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [editingNames, setEditingNames] = useState<Record<string, string>>({});
-    const addRowButtonRef = useRef<HTMLButtonElement>(null);
+    const addButtonRef = useRef<HTMLButtonElement>(null);
 
-    // Scroll to "Dodaj wiersz" button when entering editMode
+    // Scroll to "Dodaj" button when entering editMode
     useEffect(() => {
-        if (editMode && addRowButtonRef.current) {
+        if (editMode && addButtonRef.current) {
             setTimeout(() => {
-                addRowButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                addButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
             }, 100);
         }
     }, [editMode]);
@@ -527,24 +527,7 @@ const ShoppingListTable: React.FC<Props> = ({
             {/* Przycisk dodawania wiersza i przewijanie do niego */}
             {editMode && (
                 <div className="d-flex justify-content-end align-items-center mt-3 flex-wrap gap-2 px-2">
-                    <button
-                        className="btn btn-custom"
-                        ref={addRowButtonRef}
-                        onClick={() => {
-                            const newId = `temp-${Date.now()}`;
-                            updateItem(newId, "name", "");
-                            updateItem(newId, "notes", "");
-                            updateItem(newId, "priceNet", 0);
-                            updateItem(newId, "priceGross", 0);
-                            updateItem(newId, "status", "dozamowienia");
-                            updateItem(newId, "link", "");
-                            updateItem(newId, "invoiceAttached", false);
-                            updateItem(newId, "invoices", []);
-                        }}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                        Dodaj wiersz
-                    </button>
+              
                 </div>
             )}
 
