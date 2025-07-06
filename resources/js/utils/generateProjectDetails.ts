@@ -14,7 +14,7 @@ const loadImageAsync = (src: string): Promise<HTMLImageElement> => {
     });
 };
 
-export const generateProjectDetails = async (project: Project) => {
+export const generateProjectDetails = async (project: Project, userName?: string) => {
     const doc = new jsPDF();
     doc.addFileToVFS("Roboto-Italic.ttf", robotoFont);
     doc.addFont("Roboto-Italic.ttf", "Roboto", "normal");
@@ -129,10 +129,13 @@ export const generateProjectDetails = async (project: Project) => {
         doc.roundedRect(x, y, width, height, 6, 6);
     }
 
-    const now = new Date().toLocaleDateString("pl-PL");
+    
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("pl-PL");
+    const timeStr = now.toLocaleTimeString("pl-PL", { hour12: false });
     doc.setFontSize(10);
-    doc.text(`Wygenerowano przez: Marta Kowalska`, 10, doc.internal.pageSize.height - 16);
-    doc.text(`Data wygenerowania: ${now}`, 10, doc.internal.pageSize.height - 10);
+    doc.text(`Wygenerowano przez: ${userName || "Nieznany użytkownik"}`, 10, doc.internal.pageSize.height - 16);
+    doc.text(`Data wygenerowania: ${dateStr}, ${timeStr}`, 10, doc.internal.pageSize.height - 10);
 
     doc.save(`${project.name || "projekt"}_details.pdf`);
 };

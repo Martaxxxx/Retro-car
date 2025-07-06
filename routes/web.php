@@ -18,6 +18,7 @@ use App\Http\Controllers\ProjectFileController;
 
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsManager;
+use App\Http\Middleware\IsPurchaser;
 
 // SPA główna strona
 Route::get('/', fn() => view('app'));
@@ -58,6 +59,13 @@ Route::middleware(['auth'])->group(function () {
 
     // Ustawienia użytkownika
     Route::post('/user/settings', [UserSettingsController::class, 'update']);
+
+    // Lista zakupowa (shopping-items) – dostęp dla wszystkich ról (user, manager, admin, purchaser)
+    Route::get('/projects/{project}/shopping-items', [ShoppingListController::class, 'index']);
+    Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
+    Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
+    Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
+    Route::delete('/shopping-items/files/{id}', [ShoppingListController::class, 'deleteInvoice']);
 });
 
 // Projekty i zarządzanie – tylko admin + manager
@@ -75,29 +83,27 @@ Route::middleware(['auth', IsManager::class])->group(function () {
     Route::put('/projects/{id}', [ProjectController::class, 'update']);
     Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
 
-    // Lista zakupowa
-    Route::get('/projects/{project}/shopping-items', [ShoppingListController::class, 'index']);
-    Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
-    Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
-    Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
-    Route::delete('/shopping-items/files/{id}', [ShoppingListController::class, 'deleteInvoice']);
-
     // Raporty
     Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
     Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
 });
 
-// Części – publiczne
-Route::get('/projects/{project}/parts', [PartController::class, 'index']);
-Route::post('/projects/{project}/parts', [PartController::class, 'store']);
-Route::put('/parts/{part}', [PartController::class, 'update']);
-Route::delete('/parts/{part}', [PartController::class, 'destroy']);
+// Części – tylko dla user, manager, admin (NIE dla purchaser)
+Route::middleware(['auth',])->group(function () {
+    Route::get('/projects/{project}/parts', [PartController::class, 'index']);
+    Route::post('/projects/{project}/parts', [PartController::class, 'store']);
+    Route::put('/parts/{part}', [PartController::class, 'update']);
+    Route::delete('/parts/{part}', [PartController::class, 'destroy']);
+});
 
 // Powiadomienia – jako API (prefix /api)
 Route::prefix('api')->group(function () {
     Route::get('/notifications/{userId}', [NotificationController::class, 'index']);
     Route::post('/notifications/{userId}/mark-read', [NotificationController::class, 'markAllAsRead']);
     Route::post('/notifications/{userId}/mark-single-read', [NotificationController::class, 'markSingleAsRead']);
+
+    // Powiadomienia zakupowca – tylko dla purchaserów
+    Route::middleware('ispurchaser')->get('/purchaser-notifications/{userId}', [ShoppingListController::class, 'purchaserNotifications']);
 });
 
 // Szczegóły projektu

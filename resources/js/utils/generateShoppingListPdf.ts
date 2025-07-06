@@ -4,8 +4,8 @@ import robotoFont from "../styles/fonts/Roboto_Italic";
 import { ShoppingItem } from "../components/ShoppingListTable";
 import { Project } from "../types/Project";
 
-
-export const generateShoppingListPdf = (project: Project, items: ShoppingItem[]) => {
+// Dodajemy drugi argument userName
+export const generateShoppingListPdf = (project: Project, items: ShoppingItem[], userName?: string) => {
     if (!project || items.length === 0) {
         console.error("Brak danych do wygenerowania PDF");
         return;
@@ -57,7 +57,7 @@ export const generateShoppingListPdf = (project: Project, items: ShoppingItem[])
         body: items.map(item => [
             item.name,
             item.notes,
-            `${item.priceNet.toFixed(2)} zł`,
+            `${Number(item.priceNet).toFixed(2)} zł`,
             `${item.priceGross.toFixed(2)} zł`,
             statusLabel(item.status),
             "", // link
@@ -106,12 +106,15 @@ export const generateShoppingListPdf = (project: Project, items: ShoppingItem[])
         }
     });
 
-    const now = new Date().toLocaleDateString("pl-PL");
+    // Dodajemy datę i godzinę oraz użytkownika
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("pl-PL");
+    const timeStr = now.toLocaleTimeString("pl-PL", { hour12: false });
     doc.setFontSize(10);
-    doc.text(`Wygenerowano przez: Marta Kowalska`, 10, doc.internal.pageSize.height - 16);
-    doc.text(`Data wygenerowania: ${now}`, 10, doc.internal.pageSize.height - 10);
+    doc.text(`Wygenerowano przez: ${userName || "Nieznany użytkownik"}`, 10, doc.internal.pageSize.height - 16);
+    doc.text(`Data wygenerowania: ${dateStr}, ${timeStr}`, 10, doc.internal.pageSize.height - 10);
 
-    doc.save(`${project.name}_lista_zakupow.pdf`);
+    doc.save(`${project.name || "projekt"}_shoppinglist.pdf`);
 };
 
 const statusLabel = (status: ShoppingItem["status"]) => {

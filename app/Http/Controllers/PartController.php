@@ -28,14 +28,22 @@ class PartController extends Controller
     }
 
     public function store(Request $request, $projectId)
-    {
-        $data = $request->validate([
-            'part_code' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'category' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
-            'status' => 'required|in:pending,ready,installed',
-        ]);
+{
+    $data = $request->validate([
+        'part_code' => 'required|string|max:255',
+        'name' => 'required|string|max:255',
+        'category' => 'nullable|string|max:255',
+        'notes' => 'nullable|string',
+        'status' => 'nullable|in:pending,ready,installed', // <-- TUTAJ!
+    ]);
+
+    $data['notes'] = $data['notes'] ?? '';
+
+    $project = Project::findOrFail($projectId);
+    $data['project_id'] = $projectId;
+    $data['qr_code_data'] = "{$project->name}, {$data['part_code']}, {$data['name']}";
+
+    $part = Part::create($data);
 
         $data['notes'] = $data['notes'] ?? '';
 
@@ -50,7 +58,7 @@ class PartController extends Controller
             return response()->json(['error' => 'Brak zalogowanego użytkownika'], 401);
         }
 
-        $translatedStatus = $this->statusTranslations[$data['status']] ?? $data['status'];
+        $translatedStatus = $this->statusTranslations[$data['status'] ?? 'pending'] ?? ($data['status'] ?? '');
 
         // Powiadomienia do wszystkich przypisanych do projektu (oprócz siebie) + adminów
         $notifiedUsers = $project->users()->pluck('users.id')->toArray();
@@ -79,7 +87,7 @@ class PartController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'category' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            'status' => 'sometimes|required|in:pending,ready,installed',
+            'status' => 'nullable|in:pending,ready,installed', // <-- status już nie jest wymagany!
         ]);
 
         $data['notes'] = $data['notes'] ?? '';

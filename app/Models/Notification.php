@@ -12,7 +12,7 @@ class Notification extends Model
         'project_id',    // ID projektu, którego dotyczy powiadomienie
         'sender_id',     // Kto wykonał akcję (użytkownik generujący powiadomienie)
         'text',          // Treść powiadomienia
-        // BRAK 'read' i 'user_id'!
+        'type',          // Typ powiadomienia: 'part', 'shopping', itp.
     ];
 
     // Relacja: kto wykonał akcję (autor powiadomienia)

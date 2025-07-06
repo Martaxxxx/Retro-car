@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 import robotoFont from "../styles/fonts/Roboto_Italic";
 import * as XLSX from "xlsx";
 import axios from "../axios"; // dostosuj ścieżkę jeśli inna
+import { useUser } from "../components/context/UserContext"; // Dodaj import!
 
 type ShoppingItem = {
   id: string;
@@ -56,16 +57,17 @@ const ReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [reportType, setReportType] = useState<"costs" | "progress" | "">("");
 
+  const { user } = useUser(); // Dodane
+
   // Pobierz projekty z backendu i zmapuj shopping_items na shoppingList
   useEffect(() => {
     axios.get("/projects")
       .then(res => {
         const mapped = res.data.map((p: any) => ({
           ...p,
-          shoppingList: p.shopping_items ?? [], // <-- MAPOWANIE!
+          shoppingList: p.shopping_items ?? [],
         }));
         setAllProjects(mapped);
-        console.log("ALL PROJECTS:", mapped); // debug
       })
       .catch(err => console.error("Błąd pobierania projektów:", err));
   }, []);
@@ -440,6 +442,23 @@ const ReportsPage: React.FC = () => {
     XLSX.writeFile(workbook, "raport_zakupow.xlsx");
   };
 
+  // ----------- BLOKADA RAPORTU KOSZTÓW DLA ZWYKŁEGO USERA -----------
+  const isCostReportVisible = !!user?.roles && !user.roles.includes("user");
+
+  // Jeśli user nie jest jeszcze załadowany, możesz pokazać loader albo oba radio
+  if (!user) {
+    return (
+      <>
+        <Navbar />
+        <div className="container mt-5 pt-5">
+          <div style={{ padding: "60px", textAlign: "center" }}>
+            <div className="spinner-border" role="status" />
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -490,18 +509,21 @@ const ReportsPage: React.FC = () => {
 
           <h5 className="mb-4">Rodzaj raportu:</h5>
           <div className="d-flex flex-column mt-3 mb-4 gap-3">
-            <div>
-              <input
-                type="radio"
-                id="cost"
-                name="reportType"
-                value="costs"
-                onChange={() => setReportType("costs")}
-              />
-              <label htmlFor="cost" className="ms-2">
-                Raport kosztów
-              </label>
-            </div>
+            {isCostReportVisible && (
+              <div>
+                <input
+                  type="radio"
+                  id="cost"
+                  name="reportType"
+                  value="costs"
+                  onChange={() => setReportType("costs")}
+                  checked={reportType === "costs"}
+                />
+                <label htmlFor="cost" className="ms-2">
+                  Raport kosztów
+                </label>
+              </div>
+            )}
             <div>
               <input
                 type="radio"
@@ -509,6 +531,7 @@ const ReportsPage: React.FC = () => {
                 name="reportType"
                 value="progress"
                 onChange={() => setReportType("progress")}
+                checked={reportType === "progress"}
               />
               <label htmlFor="progress" className="ms-2">
                 Raport postępów

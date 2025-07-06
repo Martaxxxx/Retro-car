@@ -32,6 +32,22 @@ interface CurrentUser {
     roles: string[];
 }
 
+const customSelectStyles = {
+    control: (base) => ({
+        ...base,
+        backgroundColor: "#fff",
+        borderColor: "#9C2F3B",
+        boxShadow: "none",
+        "&:hover": { borderColor: "#9C2F3B" }
+    }),
+    option: (base, state) => ({
+        ...base,
+        backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
+        color: state.isFocused ? "#fff" : "#000",
+        cursor: "pointer"
+    })
+};
+
 const ProjectDetails: React.FC = () => {
     const { projectId, name } = useParams<{ projectId: string; name: string }>();
     const [project, setProject] = useState<Project | null>(null);
@@ -293,9 +309,11 @@ const ProjectDetails: React.FC = () => {
             let updatedParts: Part[] = [];
             const newParts = project.parts.filter(p => typeof p.id === "string" && p.id.startsWith("temp-"));
             for (const part of newParts) {
-                if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
+                // Jeśli partCode jest pusty, kopiuj z name!
+                const partCodeToSend = part.partCode?.trim() ? part.partCode : part.name;
+                if ((partCodeToSend ?? "").trim() && (part.name ?? "").trim()) {
                     const response = await axios.post(`/projects/${project.id}/parts`, {
-                        part_code: part.partCode,
+                        part_code: partCodeToSend,
                         name: part.name,
                         category: part.category,
                         notes: part.notes,
@@ -303,7 +321,7 @@ const ProjectDetails: React.FC = () => {
                     });
                     updatedParts.push({
                         ...response.data,
-                        partCode: response.data.partCode || response.data.part_code || part.partCode,
+                        partCode: response.data.partCode || response.data.part_code || partCodeToSend,
                     });
                 }
             }
@@ -331,12 +349,10 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    // WARUNEK uprawnienia do edycji
     const canEditProject = !!currentUser && Array.isArray(currentUser.roles) && (
         currentUser.roles.includes("admin") || currentUser.roles.includes("manager")
     );
 
-    // USUWANIE PROJEKTU
     const handleDeleteProject = async () => {
         if (!project) return;
         if (!window.confirm("Czy na pewno chcesz usunąć ten projekt? Operacja nieodwracalna!")) return;
@@ -405,15 +421,7 @@ const ProjectDetails: React.FC = () => {
                                         onChange={(selected) => {
                                             setUserIds(selected.map(s => s.value));
                                         }}
-                                        styles={{
-                                            control: (base) => ({
-                                                ...base,
-                                                minHeight: "40px",
-                                                borderColor: "#9C2F3B",
-                                                boxShadow: "none",
-                                                "&:hover": { borderColor: "#9C2F3B" },
-                                            }),
-                                        }}
+                                        styles={customSelectStyles}
                                     />
                                 </div>
                                 <button
@@ -461,7 +469,6 @@ const ProjectDetails: React.FC = () => {
                             )}
                         </div>
                     </div>
-                    {/* --- KOSZ PRZED KALENDARZEM, tylko przy edycji --- */}
                     <div className="calendar-wrapper order-md-3 order-2 d-flex align-items-start" style={{ marginLeft: "4px" }}>
                         {canEditProject && editProjectMode && (
                             <button
@@ -483,7 +490,6 @@ const ProjectDetails: React.FC = () => {
                                     transition: "background 0.2s",
                                 }}
                             >
-                                {/* Trash icon */}
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/>
                                 </svg>
@@ -525,20 +531,27 @@ const ProjectDetails: React.FC = () => {
                     </div>
                 ) : (
                     <Suspense fallback={<div>Ładowanie części...</div>}>
-                        <PartsTable
-                            parts={project.parts}
-                            updateStatus={updateStatus}
-                            updateField={updateField}
-                            addPart={addPart}
-                            removePart={removePart}
-                            editMode={editPartsMode}
-                            projectName={project.name}
-                            onEndEdit={async () => {
-                                await savePartsEdits();
-                            }}
-                            onToggleEdit={() => setEditPartsMode((prev) => !prev)}
-                            onGeneratePDF={() => generateProjectDetails(project)}
-                        />
+                        {currentUser?.roles && !currentUser.roles.includes("purchaser") && (
+                            <PartsTable
+                                parts={project.parts}
+                                updateStatus={updateStatus}
+                                updateField={updateField}
+                                addPart={addPart}
+                                removePart={removePart}
+                                editMode={editPartsMode}
+                                projectName={project.name}
+                                onEndEdit={async () => {
+                                    await savePartsEdits();
+                                }}
+                                onToggleEdit={() => setEditPartsMode((prev) => !prev)}
+                                onGeneratePDF={() =>
+                                    generateProjectDetails(
+                                        project,
+                                        currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
+                                    )
+                                }
+                            />
+                        )}
                     </Suspense>
                 )}
 

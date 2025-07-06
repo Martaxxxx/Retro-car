@@ -12,6 +12,13 @@ import { Project } from "../types/Project";
 
 type LocalNewRow = Omit<ShoppingItem, "id">;
 
+interface CurrentUser {
+    id: number;
+    name: string;
+    surname: string;
+    roles: string[];
+}
+
 const ShoppingList: React.FC = () => {
     const { projectId } = useParams<{ projectId: string }>();
     const navigate = useNavigate();
@@ -24,6 +31,7 @@ const ShoppingList: React.FC = () => {
     const [addError, setAddError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [fallbackProject, setFallbackProject] = useState<Project | null>(null);
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
     // NEW: Alert for required name
     const [showNameRequiredAlert, setShowNameRequiredAlert] = useState(false);
@@ -33,6 +41,24 @@ const ShoppingList: React.FC = () => {
 
     const contextProject = projects.find(p => String(p.id) === String(projectId));
     const project = contextProject || fallbackProject;
+
+    // Fetch current user info
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const res = await axios.get("/api/user");
+                setCurrentUser({
+                    id: res.data.id,
+                    name: res.data.name,
+                    surname: res.data.surname,
+                    roles: res.data.roles ?? [],
+                });
+            } catch (err) {
+                setCurrentUser(null);
+            }
+        };
+        fetchCurrentUser();
+    }, []);
 
     useEffect(() => {
         if (!contextProject && projectId) {
@@ -298,7 +324,11 @@ const ShoppingList: React.FC = () => {
 
                 <div className="d-flex justify-content-between align-items-center mt-4">
                     <h2 className="shopping-title">Lista zakupów</h2>
-                    <button className="btn btn-custom" onClick={() => generateShoppingListPdf(project, items)}>
+                    <button className="btn btn-custom" onClick={() => generateShoppingListPdf(
+                        project,
+                        items,
+                        currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
+                    )}>
                         📄 Pobierz PDF
                     </button>
                 </div>
