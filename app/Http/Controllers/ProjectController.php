@@ -12,8 +12,9 @@ class ProjectController extends Controller
 {
     public function index()
     {
-        $projects = Project::with(['shoppingItems', 'parts'])->get();
+        $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
         return response()->json($projects);
+
     }
 
     public function store(Request $request)
@@ -28,6 +29,8 @@ class ProjectController extends Controller
             'model'      => 'nullable|string|max:100',
             'year'       => 'nullable|integer|min:1885|max:' . date('Y'),
             'car_id'     => 'nullable|string|max:100|unique:projects,car_id',
+            'user_ids'   => 'nullable|array',
+            'user_ids.*' => 'exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -49,6 +52,10 @@ class ProjectController extends Controller
             'car_id'     => $request->car_id,
         ]);
 
+        if ($request->has('user_ids')) {
+            $project->users()->sync($request->user_ids);
+        }
+
         if ($request->hasFile('image')) {
             $path = $request->file('image')->storeAs(
                 "uploads/projects/project_{$project->id}",
@@ -60,11 +67,50 @@ class ProjectController extends Controller
             $project->save();
         }
 
+
+        $project->load('users'); // 👈 DODAĆ TO PRZED RETURN
+
         return response()->json([
             'message' => 'Projekt został zapisany.',
             'project' => $project,
         ], 201);
     }
+
+    public function update(Request $request, $id)
+    {
+        $project = Project::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'user_ids'   => 'nullable|array',
+            'user_ids.*' => 'exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Nieprawidłowe dane.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $project->update([
+            'start_date' => $request->start_date,
+            'end_date'   => $request->end_date,
+        ]);
+
+        if ($request->has('user_ids')) {
+            $project->users()->sync($request->user_ids);
+        }
+
+        $project->load('users');
+
+        return response()->json([
+            'message' => 'Projekt został zaktualizowany.',
+            'project' => $project,
+        ]);
+    }
+
 
     public function search(Request $request)
     {
@@ -103,7 +149,7 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
         }
 
-        $project->assignedTo  = ['Blacharz_Arek', 'Lakiernik_Kasia'];
+        $project->load('users');
         $project->parts       = $project->parts()->get();
         $project->files       = $project->files()->get();
         $project->description = 'Tutaj będzie opis projektu';

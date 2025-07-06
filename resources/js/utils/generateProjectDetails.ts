@@ -2,7 +2,8 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
 import robotoFont from "../styles/fonts/Roboto_Italic";
-import { Part, ProjectData } from "../pages/projectData";
+import { Project } from "../types/Project";
+import { Part } from "../components/PartsTable";
 
 const loadImageAsync = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -13,7 +14,7 @@ const loadImageAsync = (src: string): Promise<HTMLImageElement> => {
     });
 };
 
-export const generateProjectDetails = async (project: ProjectData) => {
+export const generateProjectDetails = async (project: Project) => {
     const doc = new jsPDF();
     doc.addFileToVFS("Roboto-Italic.ttf", robotoFont);
     doc.addFont("Roboto-Italic.ttf", "Roboto", "normal");
@@ -32,7 +33,7 @@ export const generateProjectDetails = async (project: ProjectData) => {
         `Model: ${project.model}`,
         `Rocznik: ${project.year}`,
         `Numer zlecenia: ${project.carId}`,
-        `Użytkownicy: ${project.assignedTo?.join(", ") || "Brak danych"}`
+        `Użytkownicy: ${project.users?.map(u => u.name + " " + u.surname).join(", ") || "Brak danych"}`
     ];
     lines.forEach(line => {
         doc.setFontSize(12);
@@ -64,7 +65,7 @@ export const generateProjectDetails = async (project: ProjectData) => {
         margin: { left: 10 },
         head: [["QR Kod", "Kod", "Nazwa", "Kategoria", "Notatki", "Status"]],
         body: project.parts.map(part => [
-            { qrId: part.id },
+            "qrId:" + part.id,
             part.partCode || "-",
             part.name?.normalize("NFC") || "-",
             part.category?.normalize("NFC") || "-",
@@ -72,8 +73,9 @@ export const generateProjectDetails = async (project: ProjectData) => {
             statusMap[part.status]
         ]),
         didDrawCell: (data) => {
-            if (data.column.index === 0 && data.row.raw[0]?.qrId) {
-                const qrImage = qrCodes[data.row.raw[0].qrId];
+            if (data.column.index === 0 && typeof data.row.raw[0] === "string" && data.row.raw[0].startsWith("qrId:")) {
+                const qrId = data.row.raw[0].split(":")[1];
+                const qrImage = qrCodes[qrId];
                 if (qrImage) {
                     const size = 20;
                     const x = data.cell.x + (data.cell.width - size) / 2;
@@ -119,7 +121,7 @@ export const generateProjectDetails = async (project: ProjectData) => {
         }
     });
 
-    const table = doc.lastAutoTable;
+    const table = (doc as any).lastAutoTable;
     if (table?.table) {
         const { x, y, width, height } = table.table;
         doc.setDrawColor(156, 47, 59);

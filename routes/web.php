@@ -88,7 +88,11 @@ Route::middleware('api')->group(function () {
 });
 
 //  Renowacje – publiczne
-Route::get('/renovations', [RenovationController::class, 'index']);
+//PÓKI CO WYŁĄCZAM
+// Route::get('/renovations', [RenovationController::class, 'index']);
+
+Route::middleware(['auth'])->get('/renovations', [ProjectController::class, 'index']);
+
 
 //  Szczegóły projektu
 Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
@@ -106,6 +110,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
     Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
 });
+
+//update do projektów
+Route::put('/projects/{id}', [ProjectController::class, 'update']);
+
 
 // SPA fallback – React (wszystko inne)
 Route::get('/{any}', function () {

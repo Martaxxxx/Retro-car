@@ -16,6 +16,7 @@ interface Project {
     end_date?: string;
     image?: string;
     user_id?: string;
+    users?: { id: number; name: string; surname: string }[];
 }
 
 const sortOptions = [
@@ -67,26 +68,35 @@ const Renovations: React.FC = () => {
     const [visibleCount, setVisibleCount] = useState(10);
     const [userId, setUserId] = useState<string | null>(null);
 
-    useEffect(() => {
-        axios.get("/renovations")
-            .then(response => {
-                const projects = Array.isArray(response.data) ? response.data : [];
-                setAllProjects(projects);
+// ⬇️ 1. Najpierw pobieramy userId od razu po załadowaniu komponentu
+useEffect(() => {
+  axios.get("/api/user")
+    .then(res => {
+      setUserId(res.data.id);
+    })
+    .catch(() => setUserId(null));
+}, []);
 
-                if (projects.length > 0) {
-                    const years = projects.map((p: Project) => Number(p.year));
-                    const minYear = Math.max(1885, Math.min(...years));
-                    const maxYear = Math.min(new Date().getFullYear(), Math.max(...years));
-                    setYearRange([minYear, maxYear]);
-                    setSelectedYear([minYear, maxYear]);
-                }
-            })
-            .catch(error => console.error("Błąd pobierania danych z API:", error));
+// ⬇️ 2. Dopiero gdy mamy userId, pobieramy projekty
+useEffect(() => {
+  if (!userId) return;
 
-        axios.get("/api/user")
-            .then(res => setUserId(res.data.id))
-            .catch(() => setUserId(null));
-    }, []);
+  axios.get("/renovations")
+    .then(response => {
+      const projects = Array.isArray(response.data) ? response.data : [];
+      setAllProjects(projects);
+
+      if (projects.length > 0) {
+        const years = projects.map((p: Project) => Number(p.year));
+        const minYear = Math.max(1885, Math.min(...years));
+        const maxYear = Math.min(new Date().getFullYear(), Math.max(...years));
+        setYearRange([minYear, maxYear]);
+        setSelectedYear([minYear, maxYear]);
+      }
+    })
+    .catch(error => console.error("Błąd pobierania danych z API:", error));
+}, [userId]);
+
 
     const allBrands = Array.from(new Set(allProjects.map(p => p.brand))).filter(Boolean);
     const brandOptions = allBrands.map(brand => ({ value: brand, label: brand }));
@@ -96,7 +106,12 @@ const Renovations: React.FC = () => {
         .filter(p => (statusFilter ? p.status === statusFilter : true))
         .filter(p => (brandFilter ? p.brand === brandFilter : true))
         .filter(p => Number(p.year) >= selectedYear[0] && Number(p.year) <= selectedYear[1])
-        .filter(p => !onlyMine || (userId && p.user_id === userId))
+        .filter(p => {
+          if (!onlyMine) return true;
+          if (!userId) return false;
+          return p.users?.some(u => u.id === Number(userId));
+        })
+
         .sort((a, b) => {
             switch (sortBy) {
                 case "name-asc": return a.name.localeCompare(b.name);

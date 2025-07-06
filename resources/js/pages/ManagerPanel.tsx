@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react"; // 👈 dodaj tutaj useEffect
 import { useProjectContext } from "../components/context/ProjectContext";
 import DatePicker from "react-datepicker";
 import Navbar from "../components/Navbar";
@@ -41,7 +41,23 @@ const ManagerPanel: React.FC = () => {
         model: "",
         year: "",
         carId: "",
+        userIds: [] as number[],
     });
+
+    const [allUsers, setAllUsers] = useState<{ id: number; name: string; surname: string }[]>([]);
+
+    useEffect(() => {
+      const fetchUsers = async () => {
+        try {
+          const res = await axios.get("/api/users");
+          setAllUsers(res.data || []);
+        } catch (err) {
+          console.error("Błąd ładowania użytkowników:", err);
+        }
+      };
+      fetchUsers();
+    }, []);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -74,6 +90,7 @@ const ManagerPanel: React.FC = () => {
             data.append("model", formData.model);
             data.append("year", formData.year);
             data.append("car_id", formData.carId);
+            formData.userIds.forEach((id) => data.append("user_ids[]", String(id)));
 
             await axios.post("/projects", data, {
                 headers: { "Content-Type": "multipart/form-data" },
@@ -92,6 +109,7 @@ const ManagerPanel: React.FC = () => {
                 model: "",
                 year: "",
                 carId: "",
+                userIds: [],
             });
 
             fetchProjects();
@@ -202,6 +220,34 @@ const ManagerPanel: React.FC = () => {
                             <label className="form-label">Numer VIN / ID samochodu</label>
                             <input name="carId" className="form-control" value={formData.carId} onChange={handleChange} />
                         </div>
+
+                        <div className="col-12">
+                          <label className="form-label">Przypisani użytkownicy</label>
+                          <Select
+                            isMulti
+                            placeholder="Wybierz użytkowników..."
+                            options={allUsers.map(user => ({
+                              value: user.id,
+                              label: `${user.name} ${user.surname}`,
+                            }))}
+                            value={allUsers
+                              .filter(user => formData.userIds.includes(user.id))
+                              .map(user => ({
+                                value: user.id,
+                                label: `${user.name} ${user.surname}`,
+                              }))
+                            }
+                            onChange={(selected) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                userIds: selected.map(s => s.value),
+                              }));
+                            }}
+                            styles={customSelectStyles}
+                          />
+                        </div>
+
+
                     </div>
 
                     <div className="mt-4 text-end">

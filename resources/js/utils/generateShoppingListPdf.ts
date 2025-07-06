@@ -2,9 +2,10 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import robotoFont from "../styles/fonts/Roboto_Italic";
 import { ShoppingItem } from "../components/ShoppingListTable";
-import { ProjectData } from "../pages/projectData";
+import { Project } from "../types/Project";
 
-export const generateShoppingListPdf = (project: ProjectData, items: ShoppingItem[]) => {
+
+export const generateShoppingListPdf = (project: Project, items: ShoppingItem[]) => {
     if (!project || items.length === 0) {
         console.error("Brak danych do wygenerowania PDF");
         return;

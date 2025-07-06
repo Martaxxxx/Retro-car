@@ -31,7 +31,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'role' => 'required|string|in:admin,manager,user,purchaser',
             'password' => 'required|string|min:6',
-            'avatar' => 'nullable|image|max:2048',
+            'avatar' => 'nullable|image|max:8000',
         ]);
 
         $user = new User();

@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "../../axios";
-import { ProjectData } from "../../pages/projectData";
+import { Project } from "../../types/Project";
 
 interface ProjectContextType {
-    projects: ProjectData[];
+    projects: Project[];
     fetchProjects: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [projects, setProjects] = useState<ProjectData[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
 
     const fetchProjects = async () => {
         try {
@@ -20,6 +20,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             console.error("❌ Błąd pobierania projektów:", error);
         }
     };
+
 
     useEffect(() => {
         fetchProjects();

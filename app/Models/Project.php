@@ -36,4 +36,11 @@ class Project extends Model
     {
         return $this->hasMany(\App\Models\ShoppingItem::class, 'project_id');
     }
+
+    //Relacja do userów
+    public function users()
+    {
+    return $this->belongsToMany(User::class);
+    }
+
 }

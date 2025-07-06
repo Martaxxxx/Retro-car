@@ -5,10 +5,12 @@ import { pl } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import WheelSpinner from "../components/WheelSpinner";
 import Navbar from "../components/Navbar";
-import { ProjectData } from "../pages/projectData";
+// import { ProjectData } from "../pages/projectData"; WYWALONE
 import { Part } from "../components/PartsTable";
 import { generateProjectDetails } from "../utils/generateProjectDetails";
 import axios from "../axios";
+import { Project } from "../types/Project";
+import Select from "react-select";
 
 registerLocale("pl", pl);
 
@@ -26,18 +28,18 @@ interface FileData {
 
 const ProjectDetails: React.FC = () => {
     const { projectId, name } = useParams<{ projectId: string; name: string }>();
-    const [project, setProject] = useState<ProjectData | null>(null);
+    const [project, setProject] = useState<Project | null>(null);
     const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
     const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
     const [editProjectMode, setEditProjectMode] = useState(false);
     const [editPartsMode, setEditPartsMode] = useState(false);
     const [files, setFiles] = useState<FileData[]>([]);
     const [showFileModal, setShowFileModal] = useState(false);
-    const [newRole, setNewRole] = useState("");
-    const [newName, setNewName] = useState("");
     const [timeLeft, setTimeLeft] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [allUsers, setAllUsers] = useState<{ id: number; name: string; surname: string }[]>([]);
+    const [userIds, setUserIds] = useState<number[]>([]);
     // Dodajemy spinner dla zapisu części
     const [savingParts, setSavingParts] = useState(false);
 
@@ -46,8 +48,15 @@ const ProjectDetails: React.FC = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const res = await axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`);
-                const data = res.data;
+
+                const [projectRes, usersRes] = await Promise.all([
+                    axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`),
+                    axios.get("/api/users"),
+                ]);
+
+                const data = projectRes.data;
+                setAllUsers(usersRes.data || []);
+                setUserIds((data.users || []).map((u: any) => u.id)); // <-- przypisz obecnych użytkowników
                 setProject({
                     id: data.id,
                     name: data.name,
@@ -59,7 +68,7 @@ const ProjectDetails: React.FC = () => {
                     model: data.model,
                     year: data.year,
                     carId: data.car_id,
-                    assignedTo: data.assignedTo || [],
+                    users: data.users || [],
                     description: data.description || "",
                     parts: (data.parts || []).map((part: any) => ({
                         id: String(part.id),
@@ -114,41 +123,33 @@ const ProjectDetails: React.FC = () => {
         }
     }, [project]);
 
-    const handleInputChange = (field: keyof ProjectData, value: string) => {
+    const handleInputChange = (field: keyof Project, value: string) => {
         setProject((prev) => (prev ? { ...prev, [field]: value } : null));
     };
 
-    const saveProjectDates = () => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      startDate: selectedStartDate?.toISOString() || prev.startDate,
-                      endDate: selectedEndDate?.toISOString() || prev.endDate,
-                  }
-                : null
-        );
-    };
+    const saveProjectChanges = async () => {
+        if (!project) return;
+        try {
+            // ⬇️ odbieramy odpowiedź backendu
+            const res = await axios.put(`/projects/${project.id}`, {
+                start_date: selectedStartDate?.toISOString(),
+                end_date: selectedEndDate?.toISOString(),
+                user_ids: userIds,
+            });
 
-    const addUser = () => {
-        if (!newRole || !newName) return;
-        const newUser = `${newRole}_${newName}`;
-        setProject((prev) =>
-            prev ? { ...prev, assignedTo: [...(prev.assignedTo || []), newUser] } : null
-        );
-        setNewRole("");
-        setNewName("");
-    };
+            // ⬇️ aktualizujemy użytkowników lokalnie
+            const updated = res.data.project;
+            setProject((prev) =>
+                prev ? { ...prev, users: updated.users } : prev
+            );
 
-    const removeUser = (user: string) => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      assignedTo: (prev.assignedTo ?? []).filter((u) => u !== user),
-                  }
-                : null
-        );
+            // alert("✅ Projekt został zaktualizowany.");
+            setEditProjectMode(false);
+            window.dispatchEvent(new Event("notifications:update"));
+        } catch (err) {
+            console.error("Błąd zapisu zmian projektu:", err);
+            // alert("❌ Nie udało się zapisać zmian.");
+        }
     };
 
     // Część: obsługa części projektu
@@ -341,74 +342,46 @@ const ProjectDetails: React.FC = () => {
                                         type="text"
                                         className="form-control form-control-sm mb-2"
                                         style={{ maxWidth: "500px", height: "40px" }}
-                                        value={project[field as keyof ProjectData] as string}
-                                        onChange={(e) => handleInputChange(field as keyof ProjectData, e.target.value)}
+                                        value={project[field as keyof Project] as string}
+                                        onChange={(e) => handleInputChange(field as keyof Project, e.target.value)}
                                     />
                                 ))}
-
                                 <div className="mb-3" style={{ maxWidth: "500px" }}>
                                     <label className="form-label">Użytkownicy:</label>
-                                    <ul className="list-unstyled mb-3">
-                                        {project.assignedTo?.map((u, i) => (
-                                            <li
-                                                key={i}
-                                                className="d-flex justify-content-between align-items-center bg-light mb-2 rounded border px-2 py-1"
-                                            >
-                                                <span>{u}</span>
-                                                <button
-                                                    type="button"
-                                                    className="btn-icon"
-                                                    onClick={() => removeUser(u)}
-                                                    title="Usuń użytkownika"
-                                                >
-                                                    <i className="bi bi-x"></i>
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                    <div className="d-flex align-items-center mb-3 gap-2">
-                                        <select
-                                            className="form-control"
-                                            style={{ height: "40px" }}
-                                            value={newRole}
-                                            onChange={(e) => setNewRole(e.target.value)}
-                                        >
-                                            <option value="">Rola</option>
-                                            <option value="Blacharz">Blacharz</option>
-                                            <option value="Lakiernik">Lakiernik</option>
-                                            <option value="Mechanik">Mechanik</option>
-                                        </select>
-
-                                        <select
-                                            className="form-control"
-                                            style={{ height: "40px" }}
-                                            value={newName}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                        >
-                                            <option value="">Imię</option>
-                                            <option value="Arek">Arek</option>
-                                            <option value="Kasia">Kasia</option>
-                                            <option value="Marek">Marek</option>
-                                        </select>
-
-                                        <button
-                                            type="button"
-                                            className="btn-icon"
-                                            onClick={addUser}
-                                            title="Dodaj użytkownika"
-                                        >
-                                            <i className="bi bi-plus"></i>
-                                        </button>
+                                    <div className="mb-3" style={{ maxWidth: "500px" }}>
+                                        <label className="form-label">Przypisani użytkownicy:</label>
+                                        <Select
+                                            isMulti
+                                            placeholder="Wybierz użytkowników..."
+                                            options={allUsers.map(user => ({
+                                                value: user.id,
+                                                label: `${user.name} ${user.surname}`,
+                                            }))}
+                                            value={allUsers
+                                                .filter(user => userIds.includes(user.id))
+                                                .map(user => ({
+                                                    value: user.id,
+                                                    label: `${user.name} ${user.surname}`,
+                                                }))
+                                            }
+                                            onChange={(selected) => {
+                                                setUserIds(selected.map(s => s.value));
+                                            }}
+                                            styles={{
+                                                control: (base) => ({
+                                                    ...base,
+                                                    minHeight: "40px",
+                                                    borderColor: "#9C2F3B",
+                                                    boxShadow: "none",
+                                                    "&:hover": { borderColor: "#9C2F3B" },
+                                                }),
+                                            }}
+                                        />
                                     </div>
                                 </div>
-
                                 <button
                                     className="btn btn-outline-dark hover-black mb-2"
-                                    onClick={() => {
-                                        saveProjectDates();
-                                        setEditProjectMode(false);
-                                    }}
+                                    onClick={saveProjectChanges}
                                 >
                                     Zapisz zmiany
                                 </button>
@@ -421,7 +394,7 @@ const ProjectDetails: React.FC = () => {
                                 <p><strong>Model:</strong> {project.model}</p>
                                 <p><strong>Rocznik:</strong> {project.year}</p>
                                 <p><strong>Zlecenie:</strong> {project.carId}</p>
-                                <p><strong>Użytkownicy:</strong> {project.assignedTo?.join(", ") ?? "Brak"}</p>
+                                <p><strong>Użytkownicy:</strong> {project.users && project.users.length > 0 ? project.users.map(u => `${u.name} ${u.surname}`).join(", ") : "Brak"}</p>
                             </>
                         )}
 
