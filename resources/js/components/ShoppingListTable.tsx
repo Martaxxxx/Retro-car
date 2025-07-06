@@ -34,6 +34,8 @@ interface Props {
     editMode: boolean;
     isLocalNewRow?: (id: string) => boolean;
     onLoadInvoices: (itemId: string) => Promise<void>;
+    // Dodaj ten props, jeśli obsługa zapisu jest w ShoppingList
+    onSave?: () => void;
 }
 
 const customSelectStyles = {
@@ -67,6 +69,7 @@ const ShoppingListTable: React.FC<Props> = ({
     editMode,
     isLocalNewRow,
     onLoadInvoices,
+    onSave, // z ShoppingList
 }) => {
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
     const [filters, setFilters] = useState({
@@ -79,6 +82,7 @@ const ShoppingListTable: React.FC<Props> = ({
     const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [editingNames, setEditingNames] = useState<Record<string, string>>({});
+    const [showNameRequiredAlert, setShowNameRequiredAlert] = useState(false);
     const addButtonRef = useRef<HTMLButtonElement>(null);
 
     // Scroll to "Dodaj" button when entering editMode
@@ -188,8 +192,59 @@ const ShoppingListTable: React.FC<Props> = ({
         (item) => editMode || (item.name && item.name.trim() !== "")
     );
 
+    // Funkcja walidująca przy zapisie (do użycia w ShoppingList!)
+    const validateBeforeSave = () => {
+        const hasEmptyName = items.some(item => !item.name || item.name.trim() === "");
+        if (hasEmptyName) {
+            setShowNameRequiredAlert(true);
+            return false;
+        }
+        return true;
+    };
+
+    // --- Alert u góry ekranu ---
+    useEffect(() => {
+        if (showNameRequiredAlert) {
+            const t = setTimeout(() => setShowNameRequiredAlert(false), 3500);
+            return () => clearTimeout(t);
+        }
+    }, [showNameRequiredAlert]);
+
     return (
         <div>
+            {/* ALERT/POPUP NA GÓRZE */}
+            {showNameRequiredAlert && (
+                <div style={{
+                    position: "sticky",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    background: "#d32f2f",
+                    color: "#fff",
+                    padding: "16px",
+                    textAlign: "center",
+                    fontWeight: "bold",
+                    zIndex: 2000
+                }}>
+                    Nazwa jest wymagana w każdym wierszu!
+                    <button
+                        style={{
+                            marginLeft: 20,
+                            padding: "4px 16px",
+                            border: "none",
+                            borderRadius: 4,
+                            background: "#fff",
+                            color: "#d32f2f",
+                            fontWeight: "bold",
+                            cursor: "pointer"
+                        }}
+                        onClick={() => setShowNameRequiredAlert(false)}
+                    >
+                        OK
+                    </button>
+                </div>
+            )}
+
             <div className="d-flex align-items-center mb-3 gap-2">
                 <span style={{ fontWeight: "bold", fontSize: "1.3rem", color: "#333" }}>
                     Filtr
@@ -300,15 +355,7 @@ const ShoppingListTable: React.FC<Props> = ({
                                             onChange={(e) => {
                                                 setEditingNames(ed => ({ ...ed, [item.id]: e.target.value }));
                                             }}
-                                            onBlur={e => {
-                                                const value = e.target.value;
-                                                if (value.trim() === "") {
-                                                    alert("Nazwa jest wymagana!");
-                                                    setEditingNames(ed => ({ ...ed, [item.id]: item.name ?? "" }));
-                                                    return;
-                                                }
-                                                updateItem(item.id, "name", value);
-                                            }}
+                                            onBlur={e => updateItem(item.id, "name", e.target.value)}
                                             placeholder="Nazwa (wymagana)"
                                             autoFocus={
                                                 isLocalNewRow &&
@@ -524,12 +571,7 @@ const ShoppingListTable: React.FC<Props> = ({
                 </table>
             </div>
 
-            {/* Przycisk dodawania wiersza i przewijanie do niego */}
-            {editMode && (
-                <div className="d-flex justify-content-end align-items-center mt-3 flex-wrap gap-2 px-2">
-              
-                </div>
-            )}
+            {/* Przycisk zapisz powinien być w ShoppingList, tutaj tylko funkcja walidacji! */}
 
             {totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">

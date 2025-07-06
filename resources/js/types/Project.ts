@@ -11,7 +11,7 @@ export interface Project {
     model: string;
     year: number;
     carId: string;
-    users?: { id: number; name: string; surname: string }[]; // z bazy
+    users?: { id: number; name: string; surname: string }[]; 
     parts: Part[];
     description?: string;
 }

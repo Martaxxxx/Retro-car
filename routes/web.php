@@ -14,7 +14,6 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportController;
-use App\Http\Middleware\IsAdmin;
 
 // SPA główna strona
 Route::get('/', function () {
@@ -41,15 +40,25 @@ Route::middleware(['web', 'auth'])->get('/api/user', function (Request $request)
 });
 
 //  Panel administracyjny – tylko admin
-Route::middleware(['auth', IsAdmin::class])->group(function () {
+Route::middleware(['auth', 'is.admin'])->group(function () {
+    Route::get('/admin', function () {
+        return view('app');
+    });
+    // tutaj możesz dodać dodatkowe trasy tylko dla admina
+});
+
+//  Zarządzanie użytkownikami – admin i manager
+Route::middleware(['auth', 'is.admin.manager'])->group(function () {
     Route::get('/api/users', [UserController::class, 'index']);
     Route::put('/api/users/{id}', [UserController::class, 'update']);
     Route::post('/api/users', [UserController::class, 'store']);
     Route::post('/register', [RegisterController::class, 'register']);
-    // Usuwanie użytkownika w adminpanelu
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
-    // Logi użytkownika
     Route::get('/api/users/{id}/logs', [UserController::class, 'loginLogs']);
+    // Panel zarządzania – admin i manager
+    Route::get('/zarzadzanie', function () {
+        return view('app');
+    });
 });
 
 //  Panel użytkownika – dla każdego zalogowanego
@@ -64,7 +73,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
     Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
-  
+
     // Usuwanie jednego załącznika (pliku) z itemu:
     Route::delete('/shopping-items/files/{id}', [ShoppingListController::class, 'deleteInvoice']);
 
@@ -87,12 +96,9 @@ Route::middleware('api')->group(function () {
     Route::post('/notifications/{userId}/mark-single-read', [NotificationController::class, 'markSingleAsRead']);
 });
 
-//  Renowacje – publiczne
-//PÓKI CO WYŁĄCZAM
+//  Renowacje – publiczne (wyłączone)
 // Route::get('/renovations', [RenovationController::class, 'index']);
-
 Route::middleware(['auth'])->get('/renovations', [ProjectController::class, 'index']);
-
 
 //  Szczegóły projektu
 Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
@@ -104,16 +110,14 @@ Route::get('/check-db-path', function () {
 });
 Route::get('/projects/search', [ProjectController::class, 'search']);
 
-
 // RAPORTY – DLA ZALOGOWANYCH 
 Route::middleware(['auth'])->group(function () {
     Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
     Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
 });
 
-//update do projektów
+// update do projektów
 Route::put('/projects/{id}', [ProjectController::class, 'update']);
-
 
 // SPA fallback – React (wszystko inne)
 Route::get('/{any}', function () {
