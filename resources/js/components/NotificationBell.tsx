@@ -3,6 +3,7 @@ import { Bell } from "lucide-react";
 import styled from "styled-components";
 import axios from "../axios";
 
+// --- Styled components ---
 const BellWrapper = styled.div`
   position: relative;
 `;
@@ -96,71 +97,70 @@ const ShowMoreButton = styled.button`
   }
 `;
 
+// --- Types ---
 type Notification = {
   id: number;
   text: string;
   read: boolean;
+  created_at: string;
+  project?: {
+    id: number;
+    name: string;
+  };
   user?: {
     name: string;
-    avatar?: string; 
+    avatar?: string;
   };
 };
 
-const NotificationBell: React.FC = () => {
+type Props = {
+  userId: number; // przekazuj aktualnego usera (np. z kontekstu)
+};
+
+const NotificationBell: React.FC<Props> = ({ userId }) => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [limit, setLimit] = useState(20);
   const bellRef = useRef<HTMLDivElement>(null);
-  const userId = 2; // TODO: pobierz dynamicznie!
 
+  // Fetch notifications and REPLACE the list, do not merge
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get(`/notifications/${userId}?limit=${limit}`);
+      const res = await axios.get(`/api/notifications/${userId}?limit=${limit}`);
       const list = res.data?.notifications ?? [];
-      setNotifications(prev => {
-        const currentIds = prev.map(n => n.id).sort().join(',');
-        const newIds = list.map((n: Notification) => n.id).sort().join(',');
-        return currentIds === newIds ? prev : list;
-      });
+      setNotifications(list);
     } catch (error) {
       console.error("Błąd pobierania powiadomień:", error);
     }
   };
 
+  // Jeden useEffect do pobierania powiadomień i nasłuchiwania na event/update/click outside
   useEffect(() => {
     fetchNotifications();
-  }, [userId, limit]);
+    const interval = setInterval(fetchNotifications, 5000);
 
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      fetchNotifications();
-    };
+    // Nasłuchuj na custom event (opcjonalnie)
+    const handleUpdate = () => fetchNotifications();
     window.addEventListener("notifications:update", handleUpdate);
-    return () => {
-      window.removeEventListener("notifications:update", handleUpdate);
-    };
-  }, []);
 
-  useEffect(() => {
+    // Zamknij popup po kliknięciu poza dzwonkiem
     const handleClickOutside = (e: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
-  // POPRAWIONE ENDPOINTY zgodne z backendem!
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("notifications:update", handleUpdate);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [userId, limit]);
+
   const markSingleAsRead = async (notificationId: number) => {
     try {
-      await axios.post(`/notifications/${userId}/mark-single-read`, {
+      await axios.post(`/api/notifications/${userId}/mark-single-read`, {
         notification_id: notificationId,
       });
       setNotifications(prev =>
@@ -175,8 +175,7 @@ const NotificationBell: React.FC = () => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.post(`/notifications/${userId}/mark-read`);
-      // Natychmiast optymistycznie ustawiamy wszystkie jako przeczytane
+      await axios.post(`/api/notifications/${userId}/mark-read`);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setOpen(false);
     } catch (error) {
@@ -191,13 +190,7 @@ const NotificationBell: React.FC = () => {
       <Bell
         size={24}
         style={{ cursor: "pointer" }}
-        onClick={() =>
-          setOpen(prev => {
-            const next = !prev;
-            if (next) fetchNotifications();
-            return next;
-          })
-        }
+        onClick={() => setOpen(prev => !prev)}
       />
       {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
       {open && (
@@ -208,22 +201,41 @@ const NotificationBell: React.FC = () => {
             <>
               {notifications.map(note => (
                 <NotificationItem
-                  key={note.id}
-                  isRead={note.read}
-                  onClick={() => markSingleAsRead(note.id)}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <img
-                      src={note.user?.avatar || "/default-avatar.png"}
-                      alt="avatar"
-                      style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
-                    />
-                    <div>
-                      <strong style={{ marginRight: 6 }}>{note.user?.name ?? "Użytkownik"}:</strong>
-                      {note.text}
-                    </div>
+                key={note.id}
+                isRead={note.read}
+                onClick={() => markSingleAsRead(note.id)}
+                title={note.project?.name ? `Projekt: ${note.project.name}` : ""}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", minHeight: 44 }}>
+                <img
+  src={note.user?.avatar || "/default-avatar.png"}
+  alt="avatar"
+  style={{
+    width: 40,
+    height: 40,
+    minWidth: 40,
+    minHeight: 40,
+    borderRadius: "50%",
+    objectFit: "cover",
+    border: "2px solid #fff",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    background: "#eee",
+    display: "block"
+  }}
+/>
+                  <div>
+                    <strong style={{ marginRight: 6 }}>
+                      {note.user?.name ?? "Użytkownik"}:
+                    </strong>
+                    {note.text}
+                    {note.project?.name && (
+                      <span style={{ color: "#888", marginLeft: 6, fontSize: 12 }}>
+                        [{note.project.name}]
+                      </span>
+                    )}
                   </div>
-                </NotificationItem>
+                </div>
+              </NotificationItem>
               ))}
 
               {unreadCount > 0 && (
@@ -231,7 +243,7 @@ const NotificationBell: React.FC = () => {
                   Oznacz wszystkie jako przeczytane
                 </MarkReadButton>
               )}
-              {notifications.length >= limit && unreadCount === 0 && (
+              {notifications.length >= limit && (
                 <ShowMoreButton onClick={() => setLimit(prev => prev + 20)}>
                   Pokaż więcej
                 </ShowMoreButton>

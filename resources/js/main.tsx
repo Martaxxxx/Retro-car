@@ -11,6 +11,15 @@ import GlobalLoader from "./components/context/GlobalLoader";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 
+// --- DODAJ TO: Ustaw CSRF token dla axios ---
+import axios from "axios";
+const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+if (csrf) {
+  axios.defaults.headers.common['X-CSRF-TOKEN'] = csrf;
+}
+axios.defaults.headers.common['Accept'] = 'application/json';
+// --------------------------------------------
+
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <LoadingProvider>

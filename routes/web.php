@@ -14,16 +14,18 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ProjectFileController;
+
+use App\Http\Middleware\IsAdmin;
+use App\Http\Middleware\IsManager;
 
 // SPA główna strona
-Route::get('/', function () {
-    return view('app');
-});
+Route::get('/', fn() => view('app'));
 
-//  Logowanie
+// Logowanie
 Route::post('/api/login', [AuthController::class, 'login']);
 
-//  Dane zalogowanego użytkownika (zawsze jako tablica ról)
+// Dane zalogowanego użytkownika
 Route::middleware(['web', 'auth'])->get('/api/user', function (Request $request) {
     $user = $request->user();
 
@@ -39,87 +41,74 @@ Route::middleware(['web', 'auth'])->get('/api/user', function (Request $request)
     ]);
 });
 
-//  Panel administracyjny – tylko admin
-Route::middleware(['auth', 'is.admin'])->group(function () {
-    Route::get('/admin', function () {
-        return view('app');
-    });
-    // tutaj możesz dodać dodatkowe trasy tylko dla admina
+// Panel administracyjny – tylko admin
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+    Route::get('/admin', fn() => view('app'));
 });
 
-//  Zarządzanie użytkownikami – admin i manager
-Route::middleware(['auth', 'is.admin.manager'])->group(function () {
+// Projekty i renowacje – widoczne dla KAŻDEGO zalogowanego użytkownika
+Route::middleware(['auth'])->group(function () {
+    Route::get('/projects', [ProjectController::class, 'index']);
+    Route::get('/renovations', [ProjectController::class, 'index']);
+
+    // Pliki – dostępne dla każdego zalogowanego użytkownika!
+    Route::get('/projects/{project}/files', [ProjectFileController::class, 'index']);
+    Route::post('/projects/{project}/files', [ProjectFileController::class, 'store']);
+    Route::delete('/projects/files/{id}', [ProjectFileController::class, 'destroy']);
+
+    // Ustawienia użytkownika
+    Route::post('/user/settings', [UserSettingsController::class, 'update']);
+});
+
+// Projekty i zarządzanie – tylko admin + manager
+Route::middleware(['auth', IsManager::class])->group(function () {
+    // Użytkownicy
     Route::get('/api/users', [UserController::class, 'index']);
     Route::put('/api/users/{id}', [UserController::class, 'update']);
     Route::post('/api/users', [UserController::class, 'store']);
     Route::post('/register', [RegisterController::class, 'register']);
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::get('/api/users/{id}/logs', [UserController::class, 'loginLogs']);
-    // Panel zarządzania – admin i manager
-    Route::get('/zarzadzanie', function () {
-        return view('app');
-    });
-});
 
-//  Panel użytkownika – dla każdego zalogowanego
-Route::middleware(['auth'])->post('/user/settings', [UserSettingsController::class, 'update']);
-
-//  Projekty – dostęp tylko po zalogowaniu
-Route::middleware(['auth'])->group(function () {
-    Route::get('/projects', [ProjectController::class, 'index']);
+    // Projekty (zarządzanie)
     Route::post('/projects', [ProjectController::class, 'store']);
+    Route::put('/projects/{id}', [ProjectController::class, 'update']);
+    Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
 
+    // Lista zakupowa
     Route::get('/projects/{project}/shopping-items', [ShoppingListController::class, 'index']);
     Route::post('/projects/{project}/shopping-items', [ShoppingListController::class, 'store']);
     Route::put('/shopping-items/{id}', [ShoppingListController::class, 'update']);
     Route::delete('/shopping-items/{id}', [ShoppingListController::class, 'destroy']);
-
-    // Usuwanie jednego załącznika (pliku) z itemu:
     Route::delete('/shopping-items/files/{id}', [ShoppingListController::class, 'deleteInvoice']);
 
-    // "Moje pliki" – upload i zarządzanie plikami w projektach
-    Route::get('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'index']);
-    Route::post('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'store']);
-    Route::delete('/projects/files/{id}', [\App\Http\Controllers\ProjectFileController::class, 'destroy']);
+    // Raporty
+    Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
+    Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
 });
 
-//  Części – brak auth
+// Części – publiczne
 Route::get('/projects/{project}/parts', [PartController::class, 'index']);
 Route::post('/projects/{project}/parts', [PartController::class, 'store']);
 Route::put('/parts/{part}', [PartController::class, 'update']);
 Route::delete('/parts/{part}', [PartController::class, 'destroy']);
 
-//  Powiadomienia – API
-Route::middleware('api')->group(function () {
+// Powiadomienia – jako API (prefix /api)
+Route::prefix('api')->group(function () {
     Route::get('/notifications/{userId}', [NotificationController::class, 'index']);
     Route::post('/notifications/{userId}/mark-read', [NotificationController::class, 'markAllAsRead']);
     Route::post('/notifications/{userId}/mark-single-read', [NotificationController::class, 'markSingleAsRead']);
 });
 
-//  Renowacje – publiczne (wyłączone)
-// Route::get('/renovations', [RenovationController::class, 'index']);
-Route::middleware(['auth'])->get('/renovations', [ProjectController::class, 'index']);
-
-//  Szczegóły projektu
+// Szczegóły projektu
 Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
-Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']); // dla slajdera
+Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']);
 
-// Trasa diagnostyczna 
-Route::get('/check-db-path', function () {
-    return DB::connection()->getDatabaseName();
-});
+// Trasa diagnostyczna
+Route::get('/check-db-path', fn() => DB::connection()->getDatabaseName());
+
+// Wyszukiwanie projektów – dostępne dla każdego
 Route::get('/projects/search', [ProjectController::class, 'search']);
 
-// RAPORTY – DLA ZALOGOWANYCH 
-Route::middleware(['auth'])->group(function () {
-    Route::post('/reports/costs-data', [ReportController::class, 'costsData']);
-    Route::post('/reports/progress-data', [ReportController::class, 'progressData']);
-});
-
-// update do projektów
-Route::put('/projects/{id}', [ProjectController::class, 'update']);
-
-// SPA fallback – React (wszystko inne)
-Route::get('/{any}', function () {
-    return view('app');
-})->where('any', '.*');
+// SPA fallback – wszystko inne do Reacta
+Route::get('/{any}', fn() => view('app'))->where('any', '.*');

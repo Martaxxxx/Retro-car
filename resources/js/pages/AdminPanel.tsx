@@ -42,7 +42,7 @@ interface User {
   name: string;
   surname?: string;
   email: string;
-  role: string;
+  role?: string;
   avatar?: string;
   created_at: string;
   roles?: string[];
@@ -102,13 +102,13 @@ const AdminPanel: React.FC = () => {
       name: user.name,
       surname: user.surname || "",
       email: user.email,
-      role: user.role,
+      role: Array.isArray(user.roles) ? user.roles[0] || "" : user.role || "",
     });
   };
 
   const openCreateModal = () => {
     setIsCreating(true);
-    setEditingUser({ id: 0, name: "", email: "", role: "user", created_at: "" });
+    setEditingUser({ id: 0, name: "", email: "", created_at: "" });
     setFormData({
       name: "",
       surname: "",
@@ -147,7 +147,6 @@ const AdminPanel: React.FC = () => {
   const handleCreate = async () => {
     try {
       setIsSaving(true);
-      console.log("Tworzony user:", formData);
       const data = buildFormData();
       await axios.post("/api/users", data, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -233,11 +232,16 @@ const AdminPanel: React.FC = () => {
   const filteredUsers = users.filter((user) => {
     const term = searchTerm.toLowerCase();
     return (
-      (!filterRole || user.role === filterRole) &&
+      (!filterRole ||
+        (Array.isArray(user.roles)
+          ? user.roles.includes(filterRole)
+          : user.role === filterRole)) &&
       (user.name.toLowerCase().includes(term) ||
         user.surname?.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
-        user.role.toLowerCase().includes(term) ||
+        (Array.isArray(user.roles)
+          ? user.roles.join(", ").toLowerCase().includes(term)
+          : user.role?.toLowerCase().includes(term)) ||
         user.id.toString().includes(term))
     );
   });
@@ -262,14 +266,18 @@ const AdminPanel: React.FC = () => {
             <input type="text" className="form-control" placeholder="Szukaj (ID, imię, nazwisko, email, rola...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className="col-md-4">
-            <select className="form-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-              <option value="">Wszystkie role</option>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="user">User</option>
-              <option value="purchaser">Purchaser</option>
-            </select>
-          </div>
+  <Select
+    styles={customSelectStyles}
+    options={[
+      { value: "", label: "Wszystkie role" },
+      ...roleOptions
+    ]}
+    value={[{ value: "", label: "Wszystkie role" }, ...roleOptions].find(opt => opt.value === filterRole)}
+    onChange={option => setFilterRole(option?.value || "")}
+    placeholder="Wszystkie role"
+    isClearable={false}
+  />
+</div>
         </div>
 
         <div className="table-responsive">
@@ -296,12 +304,16 @@ const AdminPanel: React.FC = () => {
                   <td>{user.name}</td>
                   <td>{user.surname}</td>
                   <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td>{Array.isArray(user.roles) ? user.roles.join(", ") : user.role}</td>
+                  <td>
+                    {user.created_at && !isNaN(Date.parse(user.created_at))
+                      ? new Date(user.created_at).toLocaleDateString()
+                      : ""}
+                  </td>
                   <td>
                     <div className="icon-actions d-flex gap-2 justify-content-center">
-                    <button className="icon-view-btn" onClick={() => handleViewLogs(user.id, user.name)} title="Pokaż logi logowania">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                      <button className="icon-view-btn" onClick={() => handleViewLogs(user.id, user.name)} title="Pokaż logi logowania">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
                       </button>
                       <button className="icon-edit-btn" onClick={() => openEditModal(user)} title="Edytuj">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-round-pen">
@@ -311,9 +323,9 @@ const AdminPanel: React.FC = () => {
                         </svg>
                       </button>
                       <button className="icon-remove-btn" onClick={() => handleDelete(user.id)} title="Usuń">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-trash3" viewBox="0 0 16 16">
-                                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
-                                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-trash3" viewBox="0 0 16 16">
+                          <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
+                        </svg>
                       </button>
                     </div>
                   </td>

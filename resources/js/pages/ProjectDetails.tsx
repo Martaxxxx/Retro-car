@@ -1,11 +1,10 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { pl } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import WheelSpinner from "../components/WheelSpinner";
 import Navbar from "../components/Navbar";
-// import { ProjectData } from "../pages/projectData"; WYWALONE
 import { Part } from "../components/PartsTable";
 import { generateProjectDetails } from "../utils/generateProjectDetails";
 import axios from "../axios";
@@ -26,6 +25,13 @@ interface FileData {
     url: string;
 }
 
+interface CurrentUser {
+    id: number;
+    name: string;
+    surname: string;
+    roles: string[];
+}
+
 const ProjectDetails: React.FC = () => {
     const { projectId, name } = useParams<{ projectId: string; name: string }>();
     const [project, setProject] = useState<Project | null>(null);
@@ -40,23 +46,38 @@ const ProjectDetails: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [allUsers, setAllUsers] = useState<{ id: number; name: string; surname: string }[]>([]);
     const [userIds, setUserIds] = useState<number[]>([]);
-    // Dodajemy spinner dla zapisu części
     const [savingParts, setSavingParts] = useState(false);
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
+    const navigate = useNavigate();
+
+    // Pobierz info o użytkowniku (endpoint poprawiony na /api/user!)
     useEffect(() => {
-        const fetchProject = async () => {
+        const fetchCurrentUser = async () => {
+            try {
+                const res = await axios.get("/api/user");
+                setCurrentUser({
+                    id: res.data.id,
+                    name: res.data.name,
+                    surname: res.data.surname,
+                    roles: res.data.roles ?? [],
+                });
+            } catch (err) {
+                setCurrentUser(null);
+            }
+        };
+        fetchCurrentUser();
+    }, []);
+
+    // Pobierz projekt i użytkowników (jeśli można edytować projekt)
+    useEffect(() => {
+        const fetchProjectAndUsers = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
-                const [projectRes, usersRes] = await Promise.all([
-                    axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`),
-                    axios.get("/api/users"),
-                ]);
-
+                const projectRes = await axios.get(`/api/projectdetails/${projectId}/${encodeURIComponent(name || "")}`);
                 const data = projectRes.data;
-                setAllUsers(usersRes.data || []);
-                setUserIds((data.users || []).map((u: any) => u.id)); // <-- przypisz obecnych użytkowników
                 setProject({
                     id: data.id,
                     name: data.name,
@@ -79,6 +100,7 @@ const ProjectDetails: React.FC = () => {
                         status: part.status,
                     })),
                 });
+                setUserIds((data.users || []).map((u: any) => u.id));
                 setSelectedStartDate(new Date(data.start_date));
                 setSelectedEndDate(new Date(data.end_date));
                 if (Array.isArray(data.files)) {
@@ -93,6 +115,18 @@ const ProjectDetails: React.FC = () => {
                 } else {
                     setFiles([]);
                 }
+
+                // Pobieraj użytkowników tylko jeśli edycja projektu jest możliwa
+                if (
+                    currentUser &&
+                    Array.isArray(currentUser.roles) &&
+                    (currentUser.roles.includes("admin") || currentUser.roles.includes("manager"))
+                ) {
+                    const usersRes = await axios.get("/api/users");
+                    setAllUsers(usersRes.data || []);
+                } else {
+                    setAllUsers([]);
+                }
             } catch (err: any) {
                 setError("Nie udało się załadować projektu.");
                 setProject(null);
@@ -101,10 +135,10 @@ const ProjectDetails: React.FC = () => {
             }
         };
 
-        if (projectId && name) {
-            fetchProject();
+        if (projectId && name && currentUser) {
+            fetchProjectAndUsers();
         }
-    }, [projectId, name]);
+    }, [projectId, name, currentUser]);
 
     useEffect(() => {
         if (project) {
@@ -130,29 +164,23 @@ const ProjectDetails: React.FC = () => {
     const saveProjectChanges = async () => {
         if (!project) return;
         try {
-            // ⬇️ odbieramy odpowiedź backendu
             const res = await axios.put(`/projects/${project.id}`, {
                 start_date: selectedStartDate?.toISOString(),
                 end_date: selectedEndDate?.toISOString(),
                 user_ids: userIds,
             });
 
-            // ⬇️ aktualizujemy użytkowników lokalnie
             const updated = res.data.project;
             setProject((prev) =>
                 prev ? { ...prev, users: updated.users } : prev
             );
-
-            // alert("✅ Projekt został zaktualizowany.");
             setEditProjectMode(false);
             window.dispatchEvent(new Event("notifications:update"));
         } catch (err) {
             console.error("Błąd zapisu zmian projektu:", err);
-            // alert("❌ Nie udało się zapisać zmian.");
         }
     };
 
-    // Część: obsługa części projektu
     const updateStatus = async (partId: string, newStatus: Part["status"]) => {
         try {
             await axios.put(`/parts/${partId}`, { status: newStatus });
@@ -171,7 +199,6 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    // ZMIANA: updateField - tylko lokalnie!
     const updateField = (
         partId: string,
         field: keyof Omit<Part, "id" | "partCode">,
@@ -195,7 +222,6 @@ const ProjectDetails: React.FC = () => {
         );
     };
 
-    // removePart - powiadomienie od razu po usunięciu
     const removePart = async (id: string) => {
         try {
             await axios.delete(`/parts/${id}`);
@@ -208,7 +234,6 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    // Pliki
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const uploadedFiles = e.target.files;
         if (!uploadedFiles) return;
@@ -218,10 +243,9 @@ const ProjectDetails: React.FC = () => {
             const formData = new FormData();
             formData.append("file", file);
             try {
-                const response = await axios.post(`/projects/${projectId}/files`, formData, {
+                await axios.post(`/projects/${projectId}/files`, formData, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                // ignorujemy tutaj newFilesData - i tak odświeżamy całą listę plików poniżej
             } catch (err: any) {
                 if (err.response) {
                     console.error("Odpowiedź serwera:", err.response.data);
@@ -262,13 +286,11 @@ const ProjectDetails: React.FC = () => {
         });
     };
 
-    // Najważniejsze: zapis części i powiadomienie tylko po sukcesie!
     const savePartsEdits = async () => {
         if (!project) return;
         setSavingParts(true);
         try {
             let updatedParts: Part[] = [];
-            // Nowe części: tworzymy pojedynczo (jak było)
             const newParts = project.parts.filter(p => typeof p.id === "string" && p.id.startsWith("temp-"));
             for (const part of newParts) {
                 if ((part.partCode ?? "").trim() && (part.name ?? "").trim()) {
@@ -285,7 +307,6 @@ const ProjectDetails: React.FC = () => {
                     });
                 }
             }
-            // Istniejące części: równoległe PUT!
             const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
             await Promise.all(
                 existingParts.map(async part => {
@@ -307,6 +328,25 @@ const ProjectDetails: React.FC = () => {
             alert("Błąd zapisu części: " + err);
         } finally {
             setSavingParts(false);
+        }
+    };
+
+    // WARUNEK uprawnienia do edycji
+    const canEditProject = !!currentUser && Array.isArray(currentUser.roles) && (
+        currentUser.roles.includes("admin") || currentUser.roles.includes("manager")
+    );
+
+    // USUWANIE PROJEKTU
+    const handleDeleteProject = async () => {
+        if (!project) return;
+        if (!window.confirm("Czy na pewno chcesz usunąć ten projekt? Operacja nieodwracalna!")) return;
+        try {
+            await axios.delete(`/projects/${project.id}`);
+            alert("Projekt został usunięty.");
+            navigate("/");
+        } catch (err) {
+            alert("Błąd podczas usuwania projektu.");
+            console.error(err);
         }
     };
 
@@ -348,36 +388,33 @@ const ProjectDetails: React.FC = () => {
                                 ))}
                                 <div className="mb-3" style={{ maxWidth: "500px" }}>
                                     <label className="form-label">Użytkownicy:</label>
-                                    <div className="mb-3" style={{ maxWidth: "500px" }}>
-                                        <label className="form-label">Przypisani użytkownicy:</label>
-                                        <Select
-                                            isMulti
-                                            placeholder="Wybierz użytkowników..."
-                                            options={allUsers.map(user => ({
+                                    <Select
+                                        isMulti
+                                        placeholder="Wybierz użytkowników..."
+                                        options={allUsers.map(user => ({
+                                            value: user.id,
+                                            label: `${user.name} ${user.surname}`,
+                                        }))}
+                                        value={allUsers
+                                            .filter(user => userIds.includes(user.id))
+                                            .map(user => ({
                                                 value: user.id,
                                                 label: `${user.name} ${user.surname}`,
-                                            }))}
-                                            value={allUsers
-                                                .filter(user => userIds.includes(user.id))
-                                                .map(user => ({
-                                                    value: user.id,
-                                                    label: `${user.name} ${user.surname}`,
-                                                }))
-                                            }
-                                            onChange={(selected) => {
-                                                setUserIds(selected.map(s => s.value));
-                                            }}
-                                            styles={{
-                                                control: (base) => ({
-                                                    ...base,
-                                                    minHeight: "40px",
-                                                    borderColor: "#9C2F3B",
-                                                    boxShadow: "none",
-                                                    "&:hover": { borderColor: "#9C2F3B" },
-                                                }),
-                                            }}
-                                        />
-                                    </div>
+                                            }))
+                                        }
+                                        onChange={(selected) => {
+                                            setUserIds(selected.map(s => s.value));
+                                        }}
+                                        styles={{
+                                            control: (base) => ({
+                                                ...base,
+                                                minHeight: "40px",
+                                                borderColor: "#9C2F3B",
+                                                boxShadow: "none",
+                                                "&:hover": { borderColor: "#9C2F3B" },
+                                            }),
+                                        }}
+                                    />
                                 </div>
                                 <button
                                     className="btn btn-outline-dark hover-black mb-2"
@@ -398,7 +435,7 @@ const ProjectDetails: React.FC = () => {
                             </>
                         )}
 
-                        <div className="d-flex flex-wrap gap-2 mt-3">
+                        <div className="d-flex flex-wrap gap-2 mt-3 align-items-center">
                             <input 
                                 type="file" 
                                 className="form-control" 
@@ -414,16 +451,45 @@ const ProjectDetails: React.FC = () => {
                             >
                                 📁 Moje pliki ({files.length})
                             </button>
-                            <button 
-                                className="btn btn-outline-dark" 
-                                onClick={() => setEditProjectMode(!editProjectMode)}
-                            >
-                                {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
-                            </button>
+                            {canEditProject && (
+                                <button 
+                                    className="btn btn-outline-dark" 
+                                    onClick={() => setEditProjectMode(!editProjectMode)}
+                                >
+                                    {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
+                                </button>
+                            )}
                         </div>
                     </div>
-                    <div className="calendar-wrapper order-md-3 order-2" style={{ marginLeft: "4px" }}>
-                        <div className="calendar-section">
+                    {/* --- KOSZ PRZED KALENDARZEM, tylko przy edycji --- */}
+                    <div className="calendar-wrapper order-md-3 order-2 d-flex align-items-start" style={{ marginLeft: "4px" }}>
+                        {canEditProject && editProjectMode && (
+                            <button
+                                className="btn btn-danger me-3"
+                                title="Usuń projekt"
+                                onClick={handleDeleteProject}
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    padding: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    borderRadius: "6px",
+                                    border: "2px solid #dc3545",
+                                    backgroundColor: "#dc3545",
+                                    color: "#fff",
+                                    boxShadow: "0 2px 6px rgba(220,53,69,0.08)",
+                                    transition: "background 0.2s",
+                                }}
+                            >
+                                {/* Trash icon */}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/>
+                                </svg>
+                            </button>
+                        )}
+                        <div className="calendar-section flex-grow-1">
                             <label className="label-date">Data Startu:</label>
                             <DatePicker
                                 selected={selectedStartDate}

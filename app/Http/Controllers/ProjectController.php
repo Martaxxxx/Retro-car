@@ -4,19 +4,21 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Project;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ProjectController extends Controller
 {
+    // odpowiada za to kto widzi projekty- wszyscy
+
     public function index()
     {
         $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
         return response()->json($projects);
-
     }
-
+    
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -54,6 +56,17 @@ class ProjectController extends Controller
 
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
+
+            // ==== TWORZENIE POWIADOMIENIA DLA KAŻDEGO USERA ====
+            if (count($request->user_ids)) {
+                $notification = Notification::create([
+                    'project_id' => $project->id,
+                    'sender_id' => auth()->id() ?? $request->user()->id ?? 1, // lub inny id jeśli nie masz auth
+                    'text' => 'Zostałeś dodany do projektu: ' . $project->name,
+                ]);
+                $notification->users()->attach($request->user_ids, ['read' => false]);
+            }
+            // ==== KONIEC POWIADOMIENIA ====
         }
 
         if ($request->hasFile('image')) {
@@ -67,8 +80,7 @@ class ProjectController extends Controller
             $project->save();
         }
 
-
-        $project->load('users'); // 👈 DODAĆ TO PRZED RETURN
+        $project->load('users');
 
         return response()->json([
             'message' => 'Projekt został zapisany.',
@@ -101,6 +113,9 @@ class ProjectController extends Controller
 
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
+
+            // Możesz tu analogicznie dorobić powiadomienia o zmianie userów/projektu
+            // np. wykryć nowych userów i wysłać im notyfikację
         }
 
         $project->load('users');
@@ -111,6 +126,24 @@ class ProjectController extends Controller
         ]);
     }
 
+    public function destroy($id)
+    {
+        $project = Project::find($id);
+
+        if (!$project) {
+            return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
+        }
+
+        // Jeśli chcesz usunąć także powiązane pliki/foldery w storage:
+        // if ($project->image) {
+        //     $folder = dirname(str_replace('/storage/', '', $project->image));
+        //     Storage::disk('public')->deleteDirectory($folder);
+        // }
+
+        $project->delete();
+
+        return response()->json(['message' => 'Projekt został usunięty.']);
+    }
 
     public function search(Request $request)
     {

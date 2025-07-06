@@ -19,7 +19,7 @@ class User extends Authenticatable
         'avatar',
     ];
 
-    protected $visible = ['id', 'name', 'surname'];
+    // protected $visible = ['id', 'name', 'surname'];
 
     protected $hidden = [
         'password',
@@ -34,21 +34,20 @@ class User extends Authenticatable
         ];
     }
 
-    // Relacja do powiadomień
+    // POPRAWNA RELACJA:
     public function notifications()
     {
-        return $this->hasMany(Notification::class);
+        return $this->belongsToMany(Notification::class, 'notification_user')
+            ->withPivot('read')
+            ->withTimestamps();
     }
-    // Historia logów
+
     public function loginLogs()
     {
-    return $this->hasMany(LoginLog::class);
+        return $this->hasMany(LoginLog::class);
     }
-
-    //Relacja do dopisania projektów
     public function projects()
     {
-    return $this->belongsToMany(Project::class);
+        return $this->belongsToMany(Project::class);
     }
-
 }

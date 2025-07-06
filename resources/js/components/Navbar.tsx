@@ -278,7 +278,6 @@ export const Navbar = () => {
     setShowRenowacjeSuggestion(false);
   };
 
-  // Zmieniamy na pełny reload na http://localhost:8000/renowacje
   const handleRenowacjeClick = () => {
     window.location.href = "http://localhost:8000/renowacje";
     setSearchResults([]);
@@ -286,7 +285,6 @@ export const Navbar = () => {
     setShowRenowacjeSuggestion(false);
   };
 
-  // --- RENDER ---
   return (
     <NavbarContainer>
       <Logo src="/retro2.png" alt="Logo" />
@@ -295,11 +293,9 @@ export const Navbar = () => {
         <StyledRouterLink to="/" end>Strona główna</StyledRouterLink>
         <StyledRouterLink to="/renowacje">Renowacje</StyledRouterLink>
         <StyledRouterLink to="/raporty">Raporty</StyledRouterLink>
-        {/* Zarządzanie: manager lub admin */}
         {(user?.roles?.includes("manager") || user?.roles?.includes("admin")) && (
           <StyledRouterLink to="/zarządzanie">Zarządzanie</StyledRouterLink>
         )}
-        {/* Admin: tylko admin */}
         {user?.roles?.includes("admin") && (
           <StyledRouterLink to="/adminpanel">Admin</StyledRouterLink>
         )}
@@ -381,9 +377,13 @@ export const Navbar = () => {
 
       <IconsContainer>
         <IconWrapper>
-          <NotificationBell />
+          {user && user.id && (
+            <NotificationBell userId={user.id} />
+          )}
         </IconWrapper>
-        <IconWrapper onClick={() => navigate("/ustawienia")}> <Settings size={26} /> </IconWrapper>
+        <IconWrapper onClick={() => navigate("/ustawienia")}>
+          <Settings size={26} />
+        </IconWrapper>
       </IconsContainer>
 
       <RightSection>
@@ -402,9 +402,13 @@ export const Navbar = () => {
             )}
           </div>
         ) : (
-          <LoginButton onClick={() => navigate("/login")}> <User size={18} /> Zaloguj się </LoginButton>
+          <LoginButton onClick={() => navigate("/login")}>
+            <User size={18} /> Zaloguj się
+          </LoginButton>
         )}
-        <Hamburger onClick={() => setIsOpen(!isOpen)}> <Menu size={24} /> </Hamburger>
+        <Hamburger onClick={() => setIsOpen(!isOpen)}>
+          <Menu size={24} />
+        </Hamburger>
       </RightSection>
     </NavbarContainer>
   );
