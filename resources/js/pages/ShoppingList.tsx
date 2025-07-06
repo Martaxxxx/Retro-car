@@ -128,61 +128,61 @@ const ShoppingList: React.FC = () => {
     };
 
     const handleAddEmptyRow = () => {
-     setLocalNewRows((prev) => [
-       ...prev,
-        {
-          name: "",
-          notes: "",
-          priceGross: 0,
-          priceNet: 0,
-          status: "dozamowienia",
-          link: "",
-          invoiceAttached: false,
-          invoices: [],
-        },
-      ]);
-      setAddError(null);
+        setLocalNewRows((prev) => [
+            ...prev,
+            {
+                name: "",
+                notes: "",
+                priceGross: 0,
+                priceNet: 0,
+                status: "dozamowienia",
+                link: "",
+                invoiceAttached: false,
+                invoices: [],
+            },
+        ]);
+        setAddError(null);
     };
 
     const handleSaveAllNewRows = async () => {
-      const savedItems: ShoppingItem[] = [];
-      let foundEmptyName = false;
+        const savedItems: ShoppingItem[] = [];
+        let foundEmptyName = false;
 
-      for (const newRow of localNewRows) {
-        if (!newRow.name || newRow.name.trim() === "") {
-          foundEmptyName = true;
-          continue;
+        for (const newRow of localNewRows) {
+            if (!newRow.name || newRow.name.trim() === "") {
+                foundEmptyName = true;
+                continue;
+            }
+
+            const formData = new FormData();
+            formData.append("name", newRow.name);
+            formData.append("notes", newRow.notes || "");
+            formData.append("priceNet", String(newRow.priceNet));
+            formData.append("priceGross", String(newRow.priceGross));
+            formData.append("status", newRow.status);
+            formData.append("link", newRow.link || "");
+            if (newRow.invoices?.length) {
+                newRow.invoices.forEach((file) => {
+                    if (file instanceof File) formData.append("invoices[]", file);
+                });
+            }
+
+            try {
+                const response = await axios.post(`/projects/${projectId}/shopping-items`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                savedItems.push(response.data);
+            } catch (err) {
+                console.error("Błąd zapisu pozycji:", err);
+            }
         }
 
-        const formData = new FormData();
-        formData.append("name", newRow.name);
-        formData.append("notes", newRow.notes || "");
-        formData.append("priceNet", String(newRow.priceNet));
-        formData.append("priceGross", String(newRow.priceGross));
-        formData.append("status", newRow.status);
-        formData.append("link", newRow.link || "");
-        if (newRow.invoices?.length) {
-          newRow.invoices.forEach((file) => {
-            if (file instanceof File) formData.append("invoices[]", file);
-          });
+        if (foundEmptyName) {
+            alert("Nazwa pozycji jest wymagana!");
         }
 
-        try {
-          const response = await axios.post(`/projects/${projectId}/shopping-items`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-          savedItems.push(response.data);
-        } catch (err) {
-          console.error("Błąd zapisu pozycji:", err);
-        }
-      }
-
-      if (foundEmptyName) {
-        alert("Nazwa pozycji jest wymagana!");
-      }
-
-      setItems((prev) => [...prev, ...savedItems]);
-      setLocalNewRows([]);
+        setItems((prev) => [...prev, ...savedItems]);
+        setLocalNewRows([]);
     };
 
     const handleCancelNewRow = () => {
@@ -197,7 +197,7 @@ const ShoppingList: React.FC = () => {
         try {
             await axios.delete(`/shopping-items/${id}`);
             setItems(prev => prev.filter(item => item.id !== id));
-        } catch (error) {}
+        } catch (error) { }
     };
 
     const totalNet = items.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
@@ -209,17 +209,17 @@ const ShoppingList: React.FC = () => {
     };
 
     const handleSaveEdit = async () => {
-      // Walidacja: okno systemowe przy pustej nazwie!
-      const hasEmptyName = [
-        ...items,
-        ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
-      ].some(item => !item.name || item.name.trim() === "");
-      if (hasEmptyName) {
-        alert("Nazwa pozycji jest wymagana!");
-        return;
-      }
-      await handleSaveAllNewRows();
-      setEditMode(false);
+        // Walidacja: okno systemowe przy pustej nazwie!
+        const hasEmptyName = [
+            ...items,
+            ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
+        ].some(item => !item.name || item.name.trim() === "");
+        if (hasEmptyName) {
+            alert("Nazwa pozycji jest wymagana!");
+            return;
+        }
+        await handleSaveAllNewRows();
+        setEditMode(false);
     };
 
     // SCROLL to "Dodaj" button when entering editMode
@@ -233,10 +233,10 @@ const ShoppingList: React.FC = () => {
 
     // Automatyczne znikanie alertu po 3,5s – opcjonalnie
     useEffect(() => {
-      if (showNameRequiredAlert) {
-        const t = setTimeout(() => setShowNameRequiredAlert(false), 3500);
-        return () => clearTimeout(t);
-      }
+        if (showNameRequiredAlert) {
+            const t = setTimeout(() => setShowNameRequiredAlert(false), 3500);
+            return () => clearTimeout(t);
+        }
     }, [showNameRequiredAlert]);
 
     if (!project || loading) {
@@ -257,35 +257,35 @@ const ShoppingList: React.FC = () => {
 
                 {/* ALERT NA GÓRZE */}
                 {showNameRequiredAlert && (
-                  <div style={{
-                    position: "sticky",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    background: "#d32f2f",
-                    color: "#fff",
-                    padding: "16px",
-                    textAlign: "center",
-                    fontWeight: "bold",
-                    zIndex: 2000
-                  }}>
-                    Nazwa jest wymagana w każdym wierszu!
-                    <button
-                      style={{
-                        marginLeft: 20,
-                        padding: "4px 16px",
-                        border: "none",
-                        borderRadius: 4,
-                        background: "#fff",
-                        color: "#d32f2f",
+                    <div style={{
+                        position: "sticky",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        background: "#d32f2f",
+                        color: "#fff",
+                        padding: "16px",
+                        textAlign: "center",
                         fontWeight: "bold",
-                        cursor: "pointer"
-                      }}
-                      onClick={() => setShowNameRequiredAlert(false)}
-                    >
-                      OK
-                    </button>
-                  </div>
+                        zIndex: 2000
+                    }}>
+                        Nazwa jest wymagana w każdym wierszu!
+                        <button
+                            style={{
+                                marginLeft: 20,
+                                padding: "4px 16px",
+                                border: "none",
+                                borderRadius: 4,
+                                background: "#fff",
+                                color: "#d32f2f",
+                                fontWeight: "bold",
+                                cursor: "pointer"
+                            }}
+                            onClick={() => setShowNameRequiredAlert(false)}
+                        >
+                            OK
+                        </button>
+                    </div>
                 )}
 
                 <Link
@@ -337,8 +337,8 @@ const ShoppingList: React.FC = () => {
 
                 <ShoppingListTable
                     items={[
-                      ...items,
-                      ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
+                        ...items,
+                        ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
                     ]}
 
                     updateItem={(id, field, value) => {
@@ -371,7 +371,7 @@ const ShoppingList: React.FC = () => {
                             ref={addButtonRef}
                             onClick={handleAddEmptyRow}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
                             Dodaj
                         </button>
                         <button className="btn btn-custom" onClick={handleSaveEdit}>Zapisz</button>
