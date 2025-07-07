@@ -26,17 +26,19 @@ const ShoppingList: React.FC = () => {
 
     const [editMode, setEditMode] = useState(false);
     const [showSummary, setShowSummary] = useState(true);
-    const [items, setItems] = useState<ShoppingItem[]>([]);
+
+    // ZATWIERDZONE dane (do podsumowania i PDF)
+    const [itemsSaved, setItemsSaved] = useState<ShoppingItem[]>([]);
+    // EDYTOWANE dane (do tabeli w trybie edycji)
+    const [itemsDraft, setItemsDraft] = useState<ShoppingItem[]>([]);
+
     const [localNewRows, setLocalNewRows] = useState<LocalNewRow[]>([]);
     const [addError, setAddError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [fallbackProject, setFallbackProject] = useState<Project | null>(null);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
-    // NEW: Alert for required name
     const [showNameRequiredAlert, setShowNameRequiredAlert] = useState(false);
-
-    // REF for the "Dodaj" button to enable scrollIntoView!
     const addButtonRef = useRef<HTMLButtonElement>(null);
 
     const contextProject = projects.find(p => String(p.id) === String(projectId));
@@ -68,81 +70,47 @@ const ShoppingList: React.FC = () => {
         }
     }, [contextProject, projectId]);
 
-    useEffect(() => {
+    // Pobierz ZATWIERDZONE pozycje (do podsumowania i PDF)
+    const fetchSavedItems = async () => {
         if (!projectId) return;
         setLoading(true);
-        axios.get(`/projects/${projectId}/shopping-items`)
-            .then(res => {
-                const data = res.data;
-                setItems(Array.isArray(data) ? data : []);
-            })
-            .catch(() => setItems([]))
-            .finally(() => setLoading(false));
+        try {
+            const res = await axios.get(`/projects/${projectId}/shopping-items`);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setItemsSaved(data);
+            setItemsDraft(data); // domyślny draft to kopia "zatwierdzonych"
+        } catch {
+            setItemsSaved([]);
+            setItemsDraft([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSavedItems();
+        // eslint-disable-next-line
     }, [projectId]);
 
+    // Ładowanie plików do itema (np. po usunięciu pliku)
     const loadInvoicesForItem = async (itemId: string) => {
         try {
             const res = await axios.get(`/projects/${projectId}/shopping-items`);
             const refreshed = Array.isArray(res.data) ? res.data : [];
-
-            setItems(prev => {
-                return prev.map(item => {
-                    const updated = refreshed.find((f: any) => f.id === item.id);
-                    return updated ? updated : item;
-                });
-            });
+            setItemsDraft(prev => prev.map(item => {
+                const updated = refreshed.find((f: any) => f.id === item.id);
+                return updated ? updated : item;
+            }));
         } catch (error) {
             console.error("Błąd podczas odświeżania plików:", error);
         }
     };
 
-    // WALIDACJA: OKNO SYSTEMOWE ALERT
+    // Edycja istniejącej pozycji (tylko w draft)
     const handleUpdate = async (id: string, field: keyof ShoppingItem, value: any) => {
-        const itemToUpdate = items.find(item => item.id === id);
-        if (!itemToUpdate) return;
-
-        let updatedInvoices = itemToUpdate.invoices;
-
-        if (field === "invoices") {
-            updatedInvoices = [
-                ...(itemToUpdate.invoices.filter(f => !(f instanceof File)) as any[]),
-                ...(Array.isArray(value) ? value.filter(f => f instanceof File) : []),
-            ];
-        }
-
-        const updatedItem = {
-            ...itemToUpdate,
-            [field]: value,
-            invoices: updatedInvoices,
-        };
-
-        try {
-            const formData = new FormData();
-            formData.append("name", updatedItem.name);
-            formData.append("notes", updatedItem.notes || "");
-            formData.append("priceNet", String(updatedItem.priceNet));
-            formData.append("priceGross", String(updatedItem.priceGross));
-            formData.append("status", updatedItem.status);
-            formData.append("link", updatedItem.link || "");
-
-            if (updatedItem.invoices && updatedItem.invoices.length > 0) {
-                for (const file of updatedItem.invoices) {
-                    if (file instanceof File) {
-                        formData.append("invoices[]", file);
-                    }
-                }
-            }
-
-            await axios.post(`/shopping-items/${id}?_method=PUT`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-
-            setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
-        } catch (error: any) {
-            if (error.response?.data?.errors?.name) {
-                alert("Nazwa pozycji jest wymagana!");
-            }
-        }
+        setItemsDraft(prev =>
+            prev.map(item => item.id === id ? { ...item, [field]: value } : item)
+        );
     };
 
     const handleLocalNewRowChange = (index: number, field: keyof LocalNewRow, value: any) => {
@@ -170,6 +138,7 @@ const ShoppingList: React.FC = () => {
         setAddError(null);
     };
 
+    // Zapisz WSZYSTKIE nowo dodane wiersze
     const handleSaveAllNewRows = async () => {
         const savedItems: ShoppingItem[] = [];
         let foundEmptyName = false;
@@ -179,7 +148,6 @@ const ShoppingList: React.FC = () => {
                 foundEmptyName = true;
                 continue;
             }
-
             const formData = new FormData();
             formData.append("name", newRow.name);
             formData.append("notes", newRow.notes || "");
@@ -192,7 +160,6 @@ const ShoppingList: React.FC = () => {
                     if (file instanceof File) formData.append("invoices[]", file);
                 });
             }
-
             try {
                 const response = await axios.post(`/projects/${projectId}/shopping-items`, formData, {
                     headers: { "Content-Type": "multipart/form-data" },
@@ -206,9 +173,9 @@ const ShoppingList: React.FC = () => {
         if (foundEmptyName) {
             alert("Nazwa pozycji jest wymagana!");
         }
-
-        setItems((prev) => [...prev, ...savedItems]);
         setLocalNewRows([]);
+        // Po zapisie odśwież całą listę (żeby nie dublować z drafcie)
+        await fetchSavedItems();
     };
 
     const handleCancelNewRow = () => {
@@ -216,35 +183,80 @@ const ShoppingList: React.FC = () => {
         setAddError(null);
     };
 
-    // SYSTEMOWY POPUP OKNA
+    // Usuwanie pozycji (tylko z draftu, do czasu zapisu)
     const handleRemoveItem = async (id: string) => {
-        const confirmed = window.confirm("Czy na pewno chcesz usunąć tę pozycję z listy zakupów?");
-        if (!confirmed) return;
-        try {
-            await axios.delete(`/shopping-items/${id}`);
-            setItems(prev => prev.filter(item => item.id !== id));
-        } catch (error) { }
+        // Jeśli wiersz istnieje w backendzie (prawdziwe id), usuwamy z backendu i potem odświeżamy
+        if (!String(id).startsWith("local-new-")) {
+            const confirmed = window.confirm("Czy na pewno chcesz usunąć tę pozycję z listy zakupów?");
+            if (!confirmed) return;
+            try {
+                await axios.delete(`/shopping-items/${id}`);
+                // Po usunięciu odśwież dane
+                await fetchSavedItems();
+            } catch (error) { }
+        } else {
+            // Jeśli to lokalny wiersz, usuwamy tylko z localNewRows
+            const index = parseInt(id.replace("local-new-", ""));
+            setLocalNewRows(prev => prev.filter((_, i) => i !== index));
+        }
     };
 
-    const totalNet = items.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
-    const totalGross = items.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
+    // PODSUMOWANIE licz tylko na itemsSaved!
+    const totalNet = itemsSaved.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
+    const totalGross = itemsSaved.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
     const countsByStatus = {
-        dozamowienia: items.filter(i => i.status === "dozamowienia").length,
-        zamowione: items.filter(i => i.status === "zamowione").length,
-        dostarczone: items.filter(i => i.status === "dostarczone").length,
+        dozamowienia: itemsSaved.filter(i => i.status === "dozamowienia").length,
+        zamowione: itemsSaved.filter(i => i.status === "zamowione").length,
+        dostarczone: itemsSaved.filter(i => i.status === "dostarczone").length,
     };
 
+    // Zapisz zmiany (tylko te istniejące, nie nowe wiersze)
     const handleSaveEdit = async () => {
         // Walidacja: okno systemowe przy pustej nazwie!
         const hasEmptyName = [
-            ...items,
+            ...itemsDraft,
             ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
         ].some(item => !item.name || item.name.trim() === "");
         if (hasEmptyName) {
             alert("Nazwa pozycji jest wymagana!");
             return;
         }
+
+        // Zapisz wszystkie edytowane istniejące pozycje (draft)
+        for (const item of itemsDraft) {
+            // Jeśli item.id zaczyna się od "local-new-", to nowy — pominąć tutaj!
+            if (String(item.id).startsWith("local-new-")) continue;
+            try {
+                const formData = new FormData();
+                formData.append("name", item.name);
+                formData.append("notes", item.notes || "");
+                formData.append("priceNet", String(item.priceNet));
+                formData.append("priceGross", String(item.priceGross));
+                formData.append("status", item.status);
+                formData.append("link", item.link || "");
+                if (item.invoices && item.invoices.length > 0) {
+                    for (const file of item.invoices) {
+                        if (file instanceof File) {
+                            formData.append("invoices[]", file);
+                        }
+                    }
+                }
+                await axios.post(`/shopping-items/${item.id}?_method=PUT`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+            } catch (error: any) {
+                if (error.response?.data?.errors?.name) {
+                    alert("Nazwa pozycji jest wymagana!");
+                }
+            }
+        }
+
+        // Zapisz nowe wiersze
         await handleSaveAllNewRows();
+
+        // Po udanym zapisie odśwież całą listę z backendu
+        await fetchSavedItems();
+
         setEditMode(false);
     };
 
@@ -257,7 +269,6 @@ const ShoppingList: React.FC = () => {
         }
     }, [editMode]);
 
-    // Automatyczne znikanie alertu po 3,5s – opcjonalnie
     useEffect(() => {
         if (showNameRequiredAlert) {
             const t = setTimeout(() => setShowNameRequiredAlert(false), 3500);
@@ -326,7 +337,7 @@ const ShoppingList: React.FC = () => {
                     <h2 className="shopping-title">Lista zakupów</h2>
                     <button className="btn btn-custom" onClick={() => generateShoppingListPdf(
                         project,
-                        items,
+                        itemsSaved,
                         currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
                     )}>
                         📄 Pobierz PDF
@@ -344,7 +355,7 @@ const ShoppingList: React.FC = () => {
                         <div className="summary-text" style={{ paddingRight: "240px" }}>
                             <p><strong>Łączna kwota netto:</strong> {totalNet} zł</p>
                             <p><strong>Łączna kwota brutto:</strong> {totalGross} zł</p>
-                            <p><strong>Liczba pozycji:</strong> {items.length}</p>
+                            <p><strong>Liczba pozycji:</strong> {itemsSaved.length}</p>
                             <p><strong>Statusy:</strong></p>
                             <ul>
                                 <li>Do zamówienia: {countsByStatus.dozamowienia}</li>
@@ -367,10 +378,9 @@ const ShoppingList: React.FC = () => {
 
                 <ShoppingListTable
                     items={[
-                        ...items,
+                        ...(editMode ? itemsDraft : itemsSaved),
                         ...localNewRows.map((row, index) => ({ ...row, id: `local-new-${index}` }))
                     ]}
-
                     updateItem={(id, field, value) => {
                         if (String(id).startsWith("local-new-")) {
                             const index = parseInt(id.replace("local-new-", ""));
@@ -379,17 +389,8 @@ const ShoppingList: React.FC = () => {
                             handleUpdate(id, field, value);
                         }
                     }}
-
                     editMode={editMode}
-                    removeItem={id => {
-                        if (String(id).startsWith("local-new-")) {
-                            const index = parseInt(id.replace("local-new-", ""));
-                            setLocalNewRows(prev => prev.filter((_, i) => i !== index));
-                        } else {
-                            handleRemoveItem(id);
-                        }
-                    }}
-
+                    removeItem={id => handleRemoveItem(id)}
                     isLocalNewRow={id => String(id).startsWith("local-new-")}
                     onLoadInvoices={loadInvoicesForItem}
                 />

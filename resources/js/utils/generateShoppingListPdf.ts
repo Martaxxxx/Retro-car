@@ -26,8 +26,8 @@ export const generateShoppingListPdf = (project: Project, items: ShoppingItem[],
 
     doc.setFontSize(12);
     let y = 40;
-    const totalNet = items.reduce((sum, i) => sum + Number(i.priceNet), 0).toFixed(2);
-    const totalGross = items.reduce((sum, i) => sum + Number(i.priceGross), 0).toFixed(2);
+    const totalNet = items.reduce((sum, i) => sum + (typeof i.priceNet === "number" ? i.priceNet : 0), 0).toFixed(2);
+    const totalGross = items.reduce((sum, i) => sum + (typeof i.priceGross === "number" ? i.priceGross : 0), 0).toFixed(2);
     const counts = {
         dozamowienia: items.filter(i => i.status === "dozamowienia").length,
         zamowione: items.filter(i => i.status === "zamowione").length,
@@ -57,8 +57,8 @@ export const generateShoppingListPdf = (project: Project, items: ShoppingItem[],
         body: items.map(item => [
             item.name,
             item.notes,
-            `${Number(item.priceNet).toFixed(2)} zł`,
-            `${item.priceGross.toFixed(2)} zł`,
+            typeof item.priceNet === "number" ? `${item.priceNet.toFixed(2)} zł` : "",
+            typeof item.priceGross === "number" ? `${item.priceGross.toFixed(2)} zł` : "",
             statusLabel(item.status),
             "", // link
             ""  // faktura

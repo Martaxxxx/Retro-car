@@ -19,8 +19,8 @@ export interface ShoppingItem {
     id: string;
     name: string;
     notes: string;
-    priceGross: number;
-    priceNet: number;
+    priceGross: number | "";
+    priceNet: number | "";
     status: "dozamowienia" | "zamowione" | "dostarczone";
     link: string;
     invoiceAttached: boolean;
@@ -34,7 +34,6 @@ interface Props {
     editMode: boolean;
     isLocalNewRow?: (id: string) => boolean;
     onLoadInvoices: (itemId: string) => Promise<void>;
-    // Dodaj ten props, jeśli obsługa zapisu jest w ShoppingList
     onSave?: () => void;
 }
 
@@ -69,7 +68,7 @@ const ShoppingListTable: React.FC<Props> = ({
     editMode,
     isLocalNewRow,
     onLoadInvoices,
-    onSave, // z ShoppingList
+    onSave,
 }) => {
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
     const [filters, setFilters] = useState({
@@ -160,15 +159,15 @@ const ShoppingListTable: React.FC<Props> = ({
     };
 
     const filteredItems = items.filter((item) => {
-        const nameMatch = item.name
+        const nameMatch = (item.name ?? "")
             .toLowerCase()
             .includes(filters.name.toLowerCase());
         const netMatch =
             filters.priceNet === "" ||
-            item.priceNet.toString().includes(filters.priceNet);
+            String(item.priceNet ?? "").includes(filters.priceNet);
         const grossMatch =
             filters.priceGross === "" ||
-            item.priceGross.toString().includes(filters.priceGross);
+            String(item.priceGross ?? "").includes(filters.priceGross);
         const statusMatch =
             filters.status === "" || item.status === filters.status;
         return nameMatch && netMatch && grossMatch && statusMatch;
@@ -355,7 +354,14 @@ const ShoppingListTable: React.FC<Props> = ({
                                             onChange={(e) => {
                                                 setEditingNames(ed => ({ ...ed, [item.id]: e.target.value }));
                                             }}
-                                            onBlur={e => updateItem(item.id, "name", e.target.value)}
+                                            onBlur={e => {
+                                                updateItem(item.id, "name", e.target.value);
+                                                setEditingNames(ed => {
+                                                    const copy = { ...ed };
+                                                    delete copy[item.id];
+                                                    return copy;
+                                                });
+                                            }}
                                             placeholder="Nazwa (wymagana)"
                                             autoFocus={
                                                 isLocalNewRow &&
@@ -408,7 +414,13 @@ const ShoppingListTable: React.FC<Props> = ({
                                         <input
                                             type="number"
                                             className="form-control form-control-sm"
-                                            value={item.priceNet ?? ""}
+                                            value={
+                                                item.priceNet === "" ||
+                                                item.priceNet === null ||
+                                                isNaN(Number(item.priceNet))
+                                                    ? ""
+                                                    : String(item.priceNet)
+                                            }
                                             onChange={(e) =>
                                                 updateItem(
                                                     item.id,
@@ -418,7 +430,9 @@ const ShoppingListTable: React.FC<Props> = ({
                                             }
                                         />
                                     ) : (
-                                        `${Number(item.priceNet).toFixed(2)} zł`
+                                        item.priceNet === "" || item.priceNet === null || isNaN(Number(item.priceNet))
+                                            ? ""
+                                            : `${Number(item.priceNet).toFixed(2)} zł`
                                     )}
                                 </td>
                                 <td>
@@ -426,7 +440,13 @@ const ShoppingListTable: React.FC<Props> = ({
                                         <input
                                             type="number"
                                             className="form-control form-control-sm"
-                                            value={item.priceGross ?? ""}
+                                            value={
+                                                item.priceGross === "" ||
+                                                item.priceGross === null ||
+                                                isNaN(Number(item.priceGross))
+                                                    ? ""
+                                                    : String(item.priceGross)
+                                            }
                                             onChange={(e) =>
                                                 updateItem(
                                                     item.id,
@@ -436,7 +456,9 @@ const ShoppingListTable: React.FC<Props> = ({
                                             }
                                         />
                                     ) : (
-                                        `${Number(item.priceGross).toFixed(2)} zł`
+                                        item.priceGross === "" || item.priceGross === null || isNaN(Number(item.priceGross))
+                                            ? ""
+                                            : `${Number(item.priceGross).toFixed(2)} zł`
                                     )}
                                 </td>
                                 <td>
@@ -544,7 +566,14 @@ const ShoppingListTable: React.FC<Props> = ({
                                         <button
                                             type="button"
                                             className="icon-remove-btn"
-                                            onClick={() => removeItem(item.id)}
+                                            onClick={() => {
+                                                setEditingNames(ed => {
+                                                    const copy = { ...ed };
+                                                    delete copy[item.id];
+                                                    return copy;
+                                                });
+                                                removeItem(item.id);
+                                            }}
                                             title={
                                                 isLocalNewRow &&
                                                     isLocalNewRow(item.id)
