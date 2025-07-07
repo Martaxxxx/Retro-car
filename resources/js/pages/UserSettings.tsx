@@ -159,7 +159,7 @@ const UserSettings: React.FC = () => {
                     <input
                       className="form-control"
                       value={editedUser.email}
-                      onChange={(e) => handleFieldChange("email", e.target.value)}
+                      disabled
                     />
                   </td>
                 </tr>
@@ -201,15 +201,9 @@ const UserSettings: React.FC = () => {
                 </tr>
               </tbody>
             </table>
-            {user.roles?.includes("admin") ? (
-              <button className="btn btn-custom mt-3" onClick={handleSave}>
-                Zapisz zmiany
-              </button>
-            ) : (
-              <button className="btn btn-secondary mt-3" disabled>
-                🔒 Zmiana danych tylko przez admina
-              </button>
-            )}
+            <button className="btn btn-custom mt-3" onClick={handleSave}>
+              Zapisz zmiany
+            </button>
           </div>
         </div>
       </div>
