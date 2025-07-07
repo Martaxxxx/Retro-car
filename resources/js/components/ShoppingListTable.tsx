@@ -148,7 +148,12 @@ const ShoppingListTable: React.FC<Props> = ({
         updateItem(id, "invoiceAttached", updated.length > 0);
 
         await onLoadInvoices(id);
+
+        // 🔁 Odśwież modal – zamknij i otwórz na nowo
+        setActiveItemId(null);
+        setTimeout(() => setActiveItemId(id), 0);
     };
+
 
     const handleFilterChange = (
         field: keyof typeof filters,

@@ -97,14 +97,32 @@ const ShoppingList: React.FC = () => {
         try {
             const res = await axios.get(`/projects/${projectId}/shopping-items`);
             const refreshed = Array.isArray(res.data) ? res.data : [];
-            setItemsDraft(prev => prev.map(item => {
-                const updated = refreshed.find((f: any) => f.id === item.id);
-                return updated ? updated : item;
-            }));
+
+            // aktualizacja draft
+            setItemsDraft(prev =>
+                prev.map(item => {
+                    const updated = refreshed.find((f: any) => f.id === item.id);
+                    return updated
+                        ? { ...item, invoices: updated.invoices || [] }
+                        : item;
+                })
+            );
+
+            // aktualizacja saved
+            setItemsSaved(prev =>
+                prev.map(item => {
+                    const updated = refreshed.find((f: any) => f.id === item.id);
+                    return updated
+                        ? { ...item, invoices: updated.invoices || [] }
+                        : item;
+                })
+            );
         } catch (error) {
             console.error("Błąd podczas odświeżania plików:", error);
         }
     };
+
+
 
     // Edycja istniejącej pozycji (tylko w draft)
     const handleUpdate = async (id: string, field: keyof ShoppingItem, value: any) => {
