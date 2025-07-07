@@ -1,7 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 
-// Importuj swoje widoki:
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Renovations from "./pages/Renovations";
@@ -10,29 +9,32 @@ import ShoppingList from "./pages/ShoppingList";
 import UserSettings from "./pages/UserSettings";
 import ManagerPanel from "./pages/ManagerPanel";
 import Reports from "./pages/Reports";
-import Register from "./pages/Register";
-import AdminPanel from "./pages/AdminPanel"; 
+import AdminPanel from "./pages/AdminPanel";
 import UserLogs from "./pages/UserLogs";
+
+import RequireRole from "./components/auth/RequireRole"; // ⬅️ IMPORT OCHRONY
 
 const App: React.FC = () => {
     return (
         <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
             <Route path="/logowanie" element={<Login />} />
-            <Route path="/renowacje" element={<Renovations />} />
-            <Route path="/projectdetails/:projectId/:name" element={<ProjectDetails />} />
-            <Route path="/projectdetails/:projectId/lista_zakupow" element={<ShoppingList />} />
-            <Route path="/ustawienia" element={<UserSettings />} />
-            <Route path="/zarządzanie" element={<ManagerPanel />} />
-            <Route path="/raporty" element={<Reports />} />
-            <Route path="/rejestracja" element={<Register />} />
-            <Route path="/adminpanel" element={<AdminPanel />} /> 
-            <Route path="/admin/users/:id/logs" element={<UserLogs />} />
+
+            {/* 🔐 Chronione trasy dla dowolnego zalogowanego użytkownika */}
+            <Route path="/ustawienia" element={<RequireRole><UserSettings /></RequireRole>} />
+            <Route path="/renowacje" element={<RequireRole><Renovations /></RequireRole>} />
+            <Route path="/projectdetails/:projectId/:name" element={<RequireRole><ProjectDetails /></RequireRole>} />
+            <Route path="/projectdetails/:projectId/lista_zakupow" element={<RequireRole><ShoppingList /></RequireRole>} />
+            <Route path="/raporty" element={<RequireRole><Reports /></RequireRole>} />
+
+            {/* 🔐 Chronione trasy tylko dla admin + manager */}
+            <Route path="/zarządzanie" element={<RequireRole roles={['admin', 'manager']}><ManagerPanel /></RequireRole>} />
+
+            {/* 🔐 Chronione trasy tylko dla admin */}
+            <Route path="/adminpanel" element={<RequireRole roles={['admin']}><AdminPanel /></RequireRole>} />
+            <Route path="/admin/users/:id/logs" element={<RequireRole roles={['admin']}><UserLogs /></RequireRole>} />
         </Routes>
     );
 };
 
 export default App;
-
-

@@ -402,7 +402,7 @@ export const Navbar = () => {
             )}
           </div>
         ) : (
-          <LoginButton onClick={() => navigate("/login")}>
+          <LoginButton onClick={() => navigate("/logowanie")}>
             <User size={18} /> Zaloguj się
           </LoginButton>
         )}
