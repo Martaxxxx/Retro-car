@@ -7,6 +7,7 @@ use App\Models\LoginLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\File;
 
 class UserController extends Controller
 {
@@ -70,6 +71,15 @@ class UserController extends Controller
         $user->role = $validated['role'];
 
         if ($request->hasFile('avatar')) {
+            // 🗑️ Usuń stary avatar jeśli istnieje i nie jest domyślny
+            if ($user->avatar && str_starts_with($user->avatar, '/storage/uploads/avatars/')) {
+                $oldPath = str_replace('/storage/', storage_path('app/public/'), $user->avatar);
+                if (File::exists($oldPath)) {
+                    File::delete($oldPath);
+                }
+            }
+
+            // 📥 Zapisz nowy avatar
             $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
         }

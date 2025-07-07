@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\File;
 
 class UserSettingsController extends Controller
 {
@@ -23,6 +24,15 @@ class UserSettingsController extends Controller
 
         // 📸 Obsługa avatara (jeśli przesłano plik)
         if ($request->hasFile('avatar')) {
+            // 🗑️ Usuń stary avatar
+            if ($user->avatar && str_starts_with($user->avatar, '/storage/uploads/avatars/')) {
+                $oldAvatar = str_replace('/storage/', storage_path('app/public/'), $user->avatar);
+                if (File::exists($oldAvatar)) {
+                    File::delete($oldAvatar);
+                }
+            }
+
+            // 📥 Zapisz nowy avatar
             $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
         }
