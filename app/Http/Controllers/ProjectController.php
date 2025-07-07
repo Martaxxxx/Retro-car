@@ -8,6 +8,7 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 
 class ProjectController extends Controller
 {
@@ -134,12 +135,13 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
         }
 
-        // Jeśli chcesz usunąć także powiązane pliki/foldery w storage:
-        // if ($project->image) {
-        //     $folder = dirname(str_replace('/storage/', '', $project->image));
-        //     Storage::disk('public')->deleteDirectory($folder);
-        // }
+        // 🔥 Usuń folder uploads/projects/project_{id}
+        $folderPath = storage_path("app/public/uploads/projects/project_{$id}");
+        if (File::exists($folderPath)) {
+            File::deleteDirectory($folderPath);
+        }
 
+        // Dopiero teraz usuń projekt z bazy
         $project->delete();
 
         return response()->json(['message' => 'Projekt został usunięty.']);
