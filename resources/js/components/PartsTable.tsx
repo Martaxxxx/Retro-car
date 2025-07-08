@@ -37,6 +37,7 @@ interface Props {
   removePart: (id: string) => void;
   editMode: boolean;
   projectName: string;
+  projectId: number;
   onEndEdit?: () => void;
   onToggleEdit: () => void;
   onGeneratePDF: () => void;
@@ -64,6 +65,19 @@ const statusOptions = [
   { value: "installed", label: "Zamontowany" },
 ];
 
+// Funkcja do generowania UNIKALNEGO partCode na podstawie max numeru
+function getNextPartCode(parts: Part[], projectId: number): string {
+  const usedCodes = parts
+    .map(p => p.partCode)
+    .filter(Boolean)
+    .filter(code => code.startsWith(`${projectId}-`))
+    .map(code => parseInt(code.split("-")[1], 10))
+    .filter(nr => !isNaN(nr));
+  const maxNr = usedCodes.length ? Math.max(...usedCodes) : 0;
+  const nextNr = maxNr + 1;
+  return `${projectId}-${String(nextNr).padStart(3, "0")}`;
+}
+
 const PartsTable: React.FC<Props> = ({
   parts,
   updateStatus,
@@ -75,6 +89,7 @@ const PartsTable: React.FC<Props> = ({
   onEndEdit,
   onToggleEdit,
   onGeneratePDF,
+  projectId
 }) => {
   const [isQRCodeReady, setQRCodeReady] = useState(false);
   const [selectedQR, setSelectedQR] = useState<string | null>(null);
@@ -155,7 +170,7 @@ const PartsTable: React.FC<Props> = ({
       });
     }
   };
-
+  console.log("PARTS:", parts);
   const handlePrintQRs = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -201,23 +216,27 @@ const PartsTable: React.FC<Props> = ({
     setCurrentPage(1);
   };
 
-  // Dodawanie wiersza w trybie edycji, status domyślny, ale można go zmienić od razu!
+  // Tu jest UNIKALNOŚĆ kodu części!
   const handleAddPart = () => {
     if (!editMode) return;
-    const brandLetter = projectName.charAt(0).toUpperCase() || "X";
-    const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
-    const nextNumber = String(parts.length + 1).padStart(3, "0");
-    const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
+    const newPartCode = getNextPartCode(parts, projectId);
     const tempId = `temp-${Date.now()}`;
+    // NIE pozwól dodać części o tym samym partCode (niezależnie czy temp czy nie)
+    const alreadyExists = parts.some(p => p.partCode === newPartCode);
+
+    if (alreadyExists) {
+      alert("Część o kodzie " + newPartCode + " już istnieje!");
+      return;
+    }
+
     addPart({
       id: tempId,
       partCode: newPartCode,
       name: "",
       category: "",
       notes: "",
-      status: newRowsStatus[tempId] || "pending",
+      status: "pending",
     });
-    // Ustaw status domyślny dla tego wiersza (opcjonalne)
     setNewRowsStatus((prev) => ({ ...prev, [tempId]: "pending" }));
   };
 
@@ -250,13 +269,14 @@ const PartsTable: React.FC<Props> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expandedNoteId]);
 
-  // Pokaż tylko wiersze z nazwą jeśli nie editMode
-  const visibleParts = paginatedParts.filter(
-    (part) => editMode || (part.name && part.name.trim() !== "")
-  );
+  // *** TU JEST KLUCZOWA LINIA! ***
+  const visibleParts = editMode
+    ? paginatedParts
+    : paginatedParts.filter(part => !part.id.startsWith("temp-") && part.name && part.name.trim() !== "");
 
   // Wykrycie nowego wiersza (temp id)
-  const isNewRow = (part: Part) => part.id.startsWith("temp-");
+  const isNewRow = (part: Part) =>
+    typeof part.id === "string" && part.id.startsWith("temp-");
 
   return (
     <div ref={tableRef}>
@@ -430,7 +450,6 @@ const PartsTable: React.FC<Props> = ({
                           ...prev,
                           [part.id]: selected?.value as Part["status"],
                         }));
-                        // Możesz od razu zapisać status do store jeśli chcesz:
                         updateStatus(part.id, selected?.value as Part["status"]);
                       }}
                       isSearchable={false}
@@ -453,7 +472,6 @@ const PartsTable: React.FC<Props> = ({
                     {statusLabels[part.status]}
                   </span>
                 )}
-
               </td>
               {editMode && (
                 <td className="text-center">

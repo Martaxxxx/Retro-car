@@ -203,11 +203,11 @@ const ProjectDetails: React.FC = () => {
             setProject((prev) =>
                 prev
                     ? {
-                          ...prev,
-                          parts: prev.parts.map((p) =>
-                              p.id === partId ? { ...p, status: newStatus } : p
-                          ),
-                      }
+                        ...prev,
+                        parts: prev.parts.map((p) =>
+                            p.id === partId ? { ...p, status: newStatus } : p
+                        ),
+                    }
                     : null
             );
         } catch (error) {
@@ -223,19 +223,34 @@ const ProjectDetails: React.FC = () => {
         setProject((prev) =>
             prev
                 ? {
-                      ...prev,
-                      parts: prev.parts.map((p) =>
-                          p.id === partId ? { ...p, [field]: value } : p
-                      ),
-                  }
+                    ...prev,
+                    parts: prev.parts.map((p) =>
+                        p.id === partId ? { ...p, [field]: value } : p
+                    ),
+                }
                 : null
         );
     };
 
     const addPart = (newPart: Part) => {
-        setProject((prev) =>
-            prev ? { ...prev, parts: [...prev.parts, newPart] } : null
-        );
+        console.log("Dodaję część:", newPart);
+        setProject((prev) => {
+            if (!prev) return null;
+
+            const isDuplicate = prev.parts.some(
+                (p) => p.partCode === newPart.partCode && p.name.trim() === ""
+            );
+
+            if (isDuplicate) {
+                console.warn("Pominięto duplikat tymczasowej części:", newPart);
+                return prev; // nie dodawaj drugi raz
+            }
+
+            return {
+                ...prev,
+                parts: [...prev.parts, newPart],
+            };
+        });
     };
 
     const removePart = async (id: string) => {
@@ -295,7 +310,7 @@ const ProjectDetails: React.FC = () => {
             if (!fileToRemove) return prev;
             if (fileToRemove.id) {
                 axios.delete(`/projects/files/${fileToRemove.id}`)
-                     .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
+                    .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
             }
             const updatedFiles = prev.filter((_, i) => i !== index);
             return updatedFiles;
@@ -306,25 +321,21 @@ const ProjectDetails: React.FC = () => {
         if (!project) return;
         setSavingParts(true);
         try {
-            let updatedParts: Part[] = [];
+            // Zapisz nowe części (POST)
             const newParts = project.parts.filter(p => typeof p.id === "string" && p.id.startsWith("temp-"));
             for (const part of newParts) {
-                // Jeśli partCode jest pusty, kopiuj z name!
                 const partCodeToSend = part.partCode?.trim() ? part.partCode : part.name;
                 if ((partCodeToSend ?? "").trim() && (part.name ?? "").trim()) {
-                    const response = await axios.post(`/projects/${project.id}/parts`, {
+                    await axios.post(`/projects/${project.id}/parts`, {
                         part_code: partCodeToSend,
                         name: part.name,
                         category: part.category,
                         notes: part.notes,
                         status: part.status,
                     });
-                    updatedParts.push({
-                        ...response.data,
-                        partCode: response.data.partCode || response.data.part_code || partCodeToSend,
-                    });
                 }
             }
+            // Zaktualizuj istniejące części (PUT)
             const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
             await Promise.all(
                 existingParts.map(async part => {
@@ -334,12 +345,22 @@ const ProjectDetails: React.FC = () => {
                         notes: part.notes,
                         status: part.status,
                     });
-                    updatedParts.push(part);
                 })
             );
-            setProject((prev) =>
-                prev ? { ...prev, parts: updatedParts } : null
-            );
+            // Pobierz części z backendu!
+            const refreshed = await axios.get(`/api/projectdetails/${project.id}/${encodeURIComponent(project.name)}`);
+            const data = refreshed.data;
+            setProject(prev => prev ? {
+                ...prev,
+                parts: (data.parts || []).map((part: any) => ({
+                    id: String(part.id),
+                    partCode: part.part_code,
+                    name: part.name,
+                    category: part.category,
+                    notes: part.notes,
+                    status: part.status,
+                }))
+            } : null);
             window.dispatchEvent(new Event("notifications:update"));
             setEditPartsMode(false);
         } catch (err) {
@@ -444,24 +465,24 @@ const ProjectDetails: React.FC = () => {
                         )}
 
                         <div className="d-flex flex-wrap gap-2 mt-3 align-items-center">
-                            <input 
-                                type="file" 
-                                className="form-control" 
-                                onChange={handleFileUpload} 
-                                multiple 
+                            <input
+                                type="file"
+                                className="form-control"
+                                onChange={handleFileUpload}
+                                multiple
                             />
                             <Link to={`/projectdetails/${project.id}/lista_zakupow`} className="btn btn-outline-dark">
                                 🛒 Lista zakupów
                             </Link>
-                            <button 
-                                className="btn btn-outline-dark" 
+                            <button
+                                className="btn btn-outline-dark"
                                 onClick={() => setShowFileModal(true)}
                             >
                                 📁 Moje pliki ({files.length})
                             </button>
                             {canEditProject && (
-                                <button 
-                                    className="btn btn-outline-dark" 
+                                <button
+                                    className="btn btn-outline-dark"
                                     onClick={() => setEditProjectMode(!editProjectMode)}
                                 >
                                     {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
@@ -491,7 +512,7 @@ const ProjectDetails: React.FC = () => {
                                 }}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/>
+                                    <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
                                 </svg>
                             </button>
                         )}
@@ -540,6 +561,7 @@ const ProjectDetails: React.FC = () => {
                                 removePart={removePart}
                                 editMode={editPartsMode}
                                 projectName={project.name}
+                                projectId={project.id}
                                 onEndEdit={async () => {
                                     await savePartsEdits();
                                 }}
