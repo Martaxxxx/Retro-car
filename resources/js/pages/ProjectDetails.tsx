@@ -563,31 +563,29 @@ const ProjectDetails: React.FC = () => {
                     </div>
                 ) : (
                     <Suspense fallback={<div>Ładowanie części...</div>}>
-                        {currentUser?.roles && !currentUser.roles.includes("purchaser") && (
-                            <PartsTable
-                            parts={project.parts}
-                            updateStatus={updateStatus}
-                            updateField={updateField}
-                            addPart={addPart}
-                            removePart={removePart}
-                            editMode={editPartsMode}
-                            projectName={project.name}
-                            projectId={project.id.toString()}
-                            onEndEdit={async () => {
-                                await savePartsEdits();
-                            }}
-                            onToggleEdit={() => setEditPartsMode((prev) => !prev)}
-                            onGeneratePDF={() =>
-                                generateProjectDetails(
-                                project,
-                                currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
-                                )
-                            }
-                            newRowsStatus={newRowsStatus}
-                            setNewRowsStatus={setNewRowsStatus}
-                            />
-                        )}
-                    </Suspense>
+  {currentUser?.roles && !currentUser.roles.includes("purchaser") && (
+    <PartsTable
+      parts={project.parts}
+      updateStatus={updateStatus}
+      updateField={updateField}
+      addPart={addPart}
+      removePart={removePart}
+      editMode={editPartsMode}
+      projectName={project.name}
+      projectId={project.id.toString()}
+      onEndEdit={async () => {
+        await savePartsEdits();
+      }}
+      onToggleEdit={() => setEditPartsMode((prev) => !prev)}
+      onGeneratePDF={() =>
+        generateProjectDetails(
+          project,
+          currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
+        )
+      }
+    />
+  )}
+</Suspense>
                 )}
 
                 {showFileModal && (
