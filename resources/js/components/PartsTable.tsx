@@ -108,11 +108,28 @@ const PartsTable: React.FC<Props> = ({
     const handleAddPart = () => {
         const brandLetter = projectName.charAt(0).toUpperCase() || "X";
         const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
-        const nextNumber = String(parts.length + 1).padStart(3, "0");
-        const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
+        const prefix = `${brandLetter}${projectCode}-`;
+        
+        // Find the highest existing number for this project prefix
+        const existingNumbers = parts
+            .filter(part => part.partCode.startsWith(prefix))
+            .map(part => {
+                const numberPart = part.partCode.substring(prefix.length);
+                return parseInt(numberPart, 10);
+            })
+            .filter(num => !isNaN(num));
+        
+        const nextNumber = existingNumbers.length > 0 
+            ? Math.max(...existingNumbers) + 1 
+            : 1;
+        
+        const newPartCode = `${prefix}${String(nextNumber).padStart(3, "0")}`;
+
+        // Generate a more robust unique ID
+        const uniqueId = `p${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         addPart({
-            id: `p${Date.now()}`,
+            id: uniqueId,
             partCode: newPartCode,
             name: "",
             category: "",

@@ -158,7 +158,20 @@ const ProjectDetails: React.FC = () => {
     };
 
     const addPart = (newPart: Part) => {
-        setProject(prev => (prev ? { ...prev, parts: [...prev.parts, newPart] } : null));
+        setProject(prev => {
+            if (!prev) return null;
+            
+            // Check for duplicate part codes and IDs
+            const isDuplicateCode = prev.parts.some(p => p.partCode === newPart.partCode);
+            const isDuplicateId = prev.parts.some(p => p.id === newPart.id);
+            
+            if (isDuplicateCode || isDuplicateId) {
+                console.warn("Attempted to add duplicate part:", newPart);
+                return prev; // Don't add duplicate
+            }
+            
+            return { ...prev, parts: [...prev.parts, newPart] };
+        });
     };
     const removePart = (id: string) => {
         setProject(prev =>
