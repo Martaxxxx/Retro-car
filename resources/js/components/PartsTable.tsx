@@ -37,10 +37,12 @@ interface Props {
   removePart: (id: string) => void;
   editMode: boolean;
   projectName: string;
-  projectId: number;
   onEndEdit?: () => void;
   onToggleEdit: () => void;
   onGeneratePDF: () => void;
+  projectId: string;
+  newRowsStatus: Record<string, Part["status"]>;
+  setNewRowsStatus: React.Dispatch<React.SetStateAction<Record<string, Part["status"]>>>;
 }
 
 const customSelectStyles = {
@@ -65,19 +67,6 @@ const statusOptions = [
   { value: "installed", label: "Zamontowany" },
 ];
 
-// Funkcja do generowania UNIKALNEGO partCode na podstawie max numeru
-function getNextPartCode(parts: Part[], projectId: number): string {
-  const usedCodes = parts
-    .map(p => p.partCode)
-    .filter(Boolean)
-    .filter(code => code.startsWith(`${projectId}-`))
-    .map(code => parseInt(code.split("-")[1], 10))
-    .filter(nr => !isNaN(nr));
-  const maxNr = usedCodes.length ? Math.max(...usedCodes) : 0;
-  const nextNr = maxNr + 1;
-  return `${projectId}-${String(nextNr).padStart(3, "0")}`;
-}
-
 const PartsTable: React.FC<Props> = ({
   parts,
   updateStatus,
@@ -89,7 +78,7 @@ const PartsTable: React.FC<Props> = ({
   onEndEdit,
   onToggleEdit,
   onGeneratePDF,
-  projectId
+  projectId,
 }) => {
   const [isQRCodeReady, setQRCodeReady] = useState(false);
   const [selectedQR, setSelectedQR] = useState<string | null>(null);
@@ -170,7 +159,7 @@ const PartsTable: React.FC<Props> = ({
       });
     }
   };
-  console.log("PARTS:", parts);
+
   const handlePrintQRs = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -216,27 +205,23 @@ const PartsTable: React.FC<Props> = ({
     setCurrentPage(1);
   };
 
-  // Tu jest UNIKALNOŚĆ kodu części!
+  // Dodawanie wiersza w trybie edycji, status domyślny, ale można go zmienić od razu!
   const handleAddPart = () => {
     if (!editMode) return;
-    const newPartCode = getNextPartCode(parts, projectId);
+    const nextNumber = String(
+      parts.filter(p => !p.id.startsWith("temp-")).length + 1
+    ).padStart(3, "0");
+    const newPartCode = `${projectId}-${nextNumber}`;
     const tempId = `temp-${Date.now()}`;
-    // NIE pozwól dodać części o tym samym partCode (niezależnie czy temp czy nie)
-    const alreadyExists = parts.some(p => p.partCode === newPartCode);
-
-    if (alreadyExists) {
-      alert("Część o kodzie " + newPartCode + " już istnieje!");
-      return;
-    }
-
     addPart({
       id: tempId,
       partCode: newPartCode,
       name: "",
       category: "",
       notes: "",
-      status: "pending",
+      status: newRowsStatus[tempId] || "pending",
     });
+    // Ustaw status domyślny dla tego wiersza (opcjonalne)
     setNewRowsStatus((prev) => ({ ...prev, [tempId]: "pending" }));
   };
 
@@ -269,14 +254,13 @@ const PartsTable: React.FC<Props> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expandedNoteId]);
 
-  // *** TU JEST KLUCZOWA LINIA! ***
-  const visibleParts = editMode
-    ? paginatedParts
-    : paginatedParts.filter(part => !part.id.startsWith("temp-") && part.name && part.name.trim() !== "");
+  // Pokaż tylko wiersze z nazwą jeśli nie editMode
+  const visibleParts = paginatedParts.filter(
+    (part) => editMode || (part.name && part.name.trim() !== "")
+  );
 
   // Wykrycie nowego wiersza (temp id)
-  const isNewRow = (part: Part) =>
-    typeof part.id === "string" && part.id.startsWith("temp-");
+  const isNewRow = (part: Part) => typeof part.id === "string" && part.id.startsWith("temp-");
 
   return (
     <div ref={tableRef}>
@@ -418,7 +402,7 @@ const PartsTable: React.FC<Props> = ({
                   <textarea
                     className="form-control form-control-sm"
                     value={part.notes ?? ""}
-                    onChange={(e) => updateField(part.id, "notes", e.target.value)}
+                    onChange={(e) => updateField(part.id, "notes", e.target.value)} // ✅ poprawnie
                     rows={2}
                   />
                 ) : (part.notes ?? "").length > 40 ? (
@@ -450,7 +434,10 @@ const PartsTable: React.FC<Props> = ({
                           ...prev,
                           [part.id]: selected?.value as Part["status"],
                         }));
-                        updateStatus(part.id, selected?.value as Part["status"]);
+                        // Możesz od razu zapisać status do store jeśli chcesz: // TUTAJ ZMIANA JEDNAK NA CO INNEGO 
+                        if (!part.id.startsWith("temp-")) {
+                          updateStatus(part.id, selected?.value as Part["status"]);
+                        }
                       }}
                       isSearchable={false}
                     />
@@ -472,6 +459,7 @@ const PartsTable: React.FC<Props> = ({
                     {statusLabels[part.status]}
                   </span>
                 )}
+
               </td>
               {editMode && (
                 <td className="text-center">

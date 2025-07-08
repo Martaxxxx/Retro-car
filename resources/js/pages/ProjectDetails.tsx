@@ -64,6 +64,7 @@ const ProjectDetails: React.FC = () => {
     const [userIds, setUserIds] = useState<number[]>([]);
     const [savingParts, setSavingParts] = useState(false);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+    const [newRowsStatus, setNewRowsStatus] = useState<Record<string, Part["status"]>>({});
 
     const navigate = useNavigate();
 
@@ -203,11 +204,11 @@ const ProjectDetails: React.FC = () => {
             setProject((prev) =>
                 prev
                     ? {
-                        ...prev,
-                        parts: prev.parts.map((p) =>
-                            p.id === partId ? { ...p, status: newStatus } : p
-                        ),
-                    }
+                          ...prev,
+                          parts: prev.parts.map((p) =>
+                              p.id === partId ? { ...p, status: newStatus } : p
+                          ),
+                      }
                     : null
             );
         } catch (error) {
@@ -216,41 +217,36 @@ const ProjectDetails: React.FC = () => {
     };
 
     const updateField = (
-        partId: string,
-        field: keyof Omit<Part, "id" | "partCode">,
-        value: string
+    partId: string,
+    field: keyof Omit<Part, "id" | "partCode">,
+    value: string
     ) => {
-        setProject((prev) =>
-            prev
-                ? {
-                    ...prev,
-                    parts: prev.parts.map((p) =>
-                        p.id === partId ? { ...p, [field]: value } : p
-                    ),
-                }
-                : null
+    // zawsze aktualizuj lokalny stan
+    setProject((prev) =>
+        prev
+        ? {
+            ...prev,
+            parts: prev.parts.map((p) =>
+                p.id === partId ? { ...p, [field]: value } : p
+            ),
+            }
+        : null
+    );
+
+    // tylko jeśli to NIE jest temp-id, wyślij do API
+    if (!partId.startsWith("temp-")) {
+        axios
+        .put(`/parts/${partId}`, { [field]: value })
+        .catch((err) =>
+            console.error(`❌ Błąd przy aktualizacji pola ${field}:`, err)
         );
+    }
     };
 
     const addPart = (newPart: Part) => {
-        console.log("Dodaję część:", newPart);
-        setProject((prev) => {
-            if (!prev) return null;
-
-            const isDuplicate = prev.parts.some(
-                (p) => p.partCode === newPart.partCode && p.name.trim() === ""
-            );
-
-            if (isDuplicate) {
-                console.warn("Pominięto duplikat tymczasowej części:", newPart);
-                return prev; // nie dodawaj drugi raz
-            }
-
-            return {
-                ...prev,
-                parts: [...prev.parts, newPart],
-            };
-        });
+        setProject((prev) =>
+            prev ? { ...prev, parts: [...prev.parts, newPart] } : null
+        );
     };
 
     const removePart = async (id: string) => {
@@ -310,7 +306,7 @@ const ProjectDetails: React.FC = () => {
             if (!fileToRemove) return prev;
             if (fileToRemove.id) {
                 axios.delete(`/projects/files/${fileToRemove.id}`)
-                    .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
+                     .catch(err => console.error("Błąd usuwania pliku na serwerze:", err));
             }
             const updatedFiles = prev.filter((_, i) => i !== index);
             return updatedFiles;
@@ -320,23 +316,36 @@ const ProjectDetails: React.FC = () => {
     const savePartsEdits = async () => {
         if (!project) return;
         setSavingParts(true);
+
         try {
-            // Zapisz nowe części (POST)
             const newParts = project.parts.filter(p => typeof p.id === "string" && p.id.startsWith("temp-"));
+            const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
+
+            const createdParts: Part[] = [];
+
             for (const part of newParts) {
                 const partCodeToSend = part.partCode?.trim() ? part.partCode : part.name;
+                const effectiveStatus = newRowsStatus[part.id] ?? part.status;
                 if ((partCodeToSend ?? "").trim() && (part.name ?? "").trim()) {
-                    await axios.post(`/projects/${project.id}/parts`, {
+                    const response = await axios.post(`/projects/${project.id}/parts`, {
                         part_code: partCodeToSend,
                         name: part.name,
                         category: part.category,
                         notes: part.notes,
                         status: part.status,
                     });
+
+                    createdParts.push({
+                        id: String(response.data.id),
+                        partCode: response.data.partCode || response.data.part_code || partCodeToSend,
+                        name: response.data.name,
+                        category: response.data.category,
+                        notes: response.data.notes,
+                        status: response.data.status,
+                    });
                 }
             }
-            // Zaktualizuj istniejące części (PUT)
-            const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
+
             await Promise.all(
                 existingParts.map(async part => {
                     await axios.put(`/parts/${part.id}`, {
@@ -347,28 +356,30 @@ const ProjectDetails: React.FC = () => {
                     });
                 })
             );
-            // Pobierz części z backendu!
-            const refreshed = await axios.get(`/api/projectdetails/${project.id}/${encodeURIComponent(project.name)}`);
-            const data = refreshed.data;
-            setProject(prev => prev ? {
-                ...prev,
-                parts: (data.parts || []).map((part: any) => ({
-                    id: String(part.id),
-                    partCode: part.part_code,
-                    name: part.name,
-                    category: part.category,
-                    notes: part.notes,
-                    status: part.status,
-                }))
-            } : null);
-            window.dispatchEvent(new Event("notifications:update"));
+
+            // ✅ Finalna aktualizacja bez temp-*:
+            setProject(prev =>
+            prev
+                ? {
+                    ...prev,
+                    parts: [
+                    ...existingParts,
+                    ...createdParts,
+                    ],
+                }
+                : null
+            );
+
             setEditPartsMode(false);
+            window.dispatchEvent(new Event("notifications:update"));
         } catch (err) {
             alert("Błąd zapisu części: " + err);
         } finally {
             setSavingParts(false);
         }
     };
+
+
 
     const canEditProject = !!currentUser && Array.isArray(currentUser.roles) && (
         currentUser.roles.includes("admin") || currentUser.roles.includes("manager")
@@ -465,24 +476,24 @@ const ProjectDetails: React.FC = () => {
                         )}
 
                         <div className="d-flex flex-wrap gap-2 mt-3 align-items-center">
-                            <input
-                                type="file"
-                                className="form-control"
-                                onChange={handleFileUpload}
-                                multiple
+                            <input 
+                                type="file" 
+                                className="form-control" 
+                                onChange={handleFileUpload} 
+                                multiple 
                             />
                             <Link to={`/projectdetails/${project.id}/lista_zakupow`} className="btn btn-outline-dark">
                                 🛒 Lista zakupów
                             </Link>
-                            <button
-                                className="btn btn-outline-dark"
+                            <button 
+                                className="btn btn-outline-dark" 
                                 onClick={() => setShowFileModal(true)}
                             >
                                 📁 Moje pliki ({files.length})
                             </button>
                             {canEditProject && (
-                                <button
-                                    className="btn btn-outline-dark"
+                                <button 
+                                    className="btn btn-outline-dark" 
                                     onClick={() => setEditProjectMode(!editProjectMode)}
                                 >
                                     {editProjectMode ? "Anuluj edycję" : "Edytuj projekt"}
@@ -512,7 +523,7 @@ const ProjectDetails: React.FC = () => {
                                 }}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
+                                    <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/>
                                 </svg>
                             </button>
                         )}
@@ -554,24 +565,26 @@ const ProjectDetails: React.FC = () => {
                     <Suspense fallback={<div>Ładowanie części...</div>}>
                         {currentUser?.roles && !currentUser.roles.includes("purchaser") && (
                             <PartsTable
-                                parts={project.parts}
-                                updateStatus={updateStatus}
-                                updateField={updateField}
-                                addPart={addPart}
-                                removePart={removePart}
-                                editMode={editPartsMode}
-                                projectName={project.name}
-                                projectId={project.id}
-                                onEndEdit={async () => {
-                                    await savePartsEdits();
-                                }}
-                                onToggleEdit={() => setEditPartsMode((prev) => !prev)}
-                                onGeneratePDF={() =>
-                                    generateProjectDetails(
-                                        project,
-                                        currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
-                                    )
-                                }
+                            parts={project.parts}
+                            updateStatus={updateStatus}
+                            updateField={updateField}
+                            addPart={addPart}
+                            removePart={removePart}
+                            editMode={editPartsMode}
+                            projectName={project.name}
+                            projectId={project.id.toString()}
+                            onEndEdit={async () => {
+                                await savePartsEdits();
+                            }}
+                            onToggleEdit={() => setEditPartsMode((prev) => !prev)}
+                            onGeneratePDF={() =>
+                                generateProjectDetails(
+                                project,
+                                currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
+                                )
+                            }
+                            newRowsStatus={newRowsStatus}
+                            setNewRowsStatus={setNewRowsStatus}
                             />
                         )}
                     </Suspense>
