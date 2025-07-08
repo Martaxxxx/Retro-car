@@ -14,14 +14,17 @@ interface UserContextType {
   setUser: (user: User | null) => void;
   fetchUser: () => Promise<void>;
   logout: () => void;
+  isLoadingUser: boolean; // ← NOWE
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   const fetchUser = async () => {
+    setIsLoadingUser(true);
     try {
       const response = await axios.get("/api/user");
       const userData = response.data;
@@ -33,33 +36,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar: userData.avatar || "/user.jpg",
         roles: Array.isArray(userData.roles)
           ? userData.roles
-          : [userData.role ?? "user"], // ← poprawka
+          : [userData.role ?? "user"],
       };
-
 
       setUser(formattedUser);
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        console.error("❌ Błąd pobierania użytkownika:", error.response.status, error.response.data);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          console.warn("🚫 Sesja wygasła – użytkownik niezalogowany.");
+        } else {
+          console.error("❌ Błąd pobierania użytkownika:", error.response?.data || error.message);
+        }
       } else {
         console.error("❌ Nieznany błąd pobierania użytkownika:", error);
       }
-      setUser(null);
+    } finally {
+      setIsLoadingUser(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
     setUser(null);
     window.location.href = "/logowanie";
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      fetchUser();
-    }
+    fetchUser(); // ← BEZ sprawdzania tokena
   }, []);
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, setUser, fetchUser, logout }}>
+    <UserContext.Provider value={{ user, setUser, fetchUser, logout, isLoadingUser }}>
       {children}
     </UserContext.Provider>
   );

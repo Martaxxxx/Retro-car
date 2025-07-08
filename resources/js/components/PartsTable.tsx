@@ -398,7 +398,7 @@ const PartsTable: React.FC<Props> = ({
                   <textarea
                     className="form-control form-control-sm"
                     value={part.notes ?? ""}
-                    onChange={(e) => updateField(part.id, "notes", e.target.value)}
+                    onChange={(e) => updateField(part.id, "notes", e.target.value)} // ✅ poprawnie
                     rows={2}
                   />
                 ) : (part.notes ?? "").length > 40 ? (
@@ -430,8 +430,10 @@ const PartsTable: React.FC<Props> = ({
                           ...prev,
                           [part.id]: selected?.value as Part["status"],
                         }));
-                        // Możesz od razu zapisać status do store jeśli chcesz:
-                        updateStatus(part.id, selected?.value as Part["status"]);
+                        // Możesz od razu zapisać status do store jeśli chcesz: // TUTAJ ZMIANA JEDNAK NA CO INNEGO 
+                        if (!part.id.startsWith("temp-")) {
+                          updateStatus(part.id, selected?.value as Part["status"]);
+                        }
                       }}
                       isSearchable={false}
                     />

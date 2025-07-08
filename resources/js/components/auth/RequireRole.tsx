@@ -8,11 +8,16 @@ interface Props {
 }
 
 const RequireRole: React.FC<Props> = ({ roles, children }) => {
-    const { user } = useUser();
+    const { user, isLoadingUser } = useUser();
+
+    if (isLoadingUser) {
+        return null; // lub spinner
+    }
 
     if (!user) {
         return <Navigate to="/logowanie" replace />;
     }
+
 
     if (roles && !roles.some(role => user.roles?.includes(role))) {
         return <Navigate to="/" replace />;

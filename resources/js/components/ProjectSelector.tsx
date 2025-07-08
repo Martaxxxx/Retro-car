@@ -1,11 +1,11 @@
 import React from "react";
-import { projectMap, ProjectData } from "../pages/projectData";
+import { Project } from "../types/Project"; // jeśli masz tam typy
 import { useProjectContext } from "./context/ProjectContext";
 
 interface Props {
     selectedProjectId: string;
     onChange: (id: string) => void;
-    dynamicProjects?: ProjectData[]; // Możesz też przekazać ręcznie
+    dynamicProjects?: Project[]; // Możesz też przekazać ręcznie
 }
 
 const ProjectSelector: React.FC<Props> = ({
@@ -16,10 +16,7 @@ const ProjectSelector: React.FC<Props> = ({
     const { projects: contextProjects } = useProjectContext();
 
     // Łączymy projekty statyczne i dynamiczne (jeśli są)
-    const allProjects: ProjectData[] = [
-        ...Object.values(projectMap),
-        ...(dynamicProjects ?? contextProjects ?? []),
-    ];
+const allProjects: Project[] = dynamicProjects ?? contextProjects ?? [];
 
     return (
         <div className="form-group mb-3">

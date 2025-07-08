@@ -216,20 +216,30 @@ const ProjectDetails: React.FC = () => {
     };
 
     const updateField = (
-        partId: string,
-        field: keyof Omit<Part, "id" | "partCode">,
-        value: string
+    partId: string,
+    field: keyof Omit<Part, "id" | "partCode">,
+    value: string
     ) => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      parts: prev.parts.map((p) =>
-                          p.id === partId ? { ...p, [field]: value } : p
-                      ),
-                  }
-                : null
+    // zawsze aktualizuj lokalny stan
+    setProject((prev) =>
+        prev
+        ? {
+            ...prev,
+            parts: prev.parts.map((p) =>
+                p.id === partId ? { ...p, [field]: value } : p
+            ),
+            }
+        : null
+    );
+
+    // tylko jeśli to NIE jest temp-id, wyślij do API
+    if (!partId.startsWith("temp-")) {
+        axios
+        .put(`/parts/${partId}`, { [field]: value })
+        .catch((err) =>
+            console.error(`❌ Błąd przy aktualizacji pola ${field}:`, err)
         );
+    }
     };
 
     const addPart = (newPart: Part) => {
@@ -345,8 +355,19 @@ const ProjectDetails: React.FC = () => {
                 })
             );
 
-            const allParts = [...existingParts, ...createdParts];
-            setProject(prev => prev ? { ...prev, parts: allParts } : null);
+            // ✅ Finalna aktualizacja bez temp-*:
+            setProject(prev =>
+            prev
+                ? {
+                    ...prev,
+                    parts: [
+                    ...existingParts,
+                    ...createdParts,
+                    ],
+                }
+                : null
+            );
+
             setEditPartsMode(false);
             window.dispatchEvent(new Event("notifications:update"));
         } catch (err) {
@@ -355,6 +376,7 @@ const ProjectDetails: React.FC = () => {
             setSavingParts(false);
         }
     };
+
 
 
     const canEditProject = !!currentUser && Array.isArray(currentUser.roles) && (
