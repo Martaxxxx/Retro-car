@@ -583,8 +583,8 @@ const ProjectDetails: React.FC = () => {
                                 currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
                                 )
                             }
-                            newRowsStatus={newRowsStatus}
-                            setNewRowsStatus={setNewRowsStatus}
+                            // newRowsStatus={newRowsStatus} - usunięcie przy bublu
+                            // setNewRowsStatus={setNewRowsStatus} -/-/
                             />
                         )}
                     </Suspense>

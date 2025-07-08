@@ -41,8 +41,8 @@ interface Props {
   onToggleEdit: () => void;
   onGeneratePDF: () => void;
   projectId: string;
-  newRowsStatus: Record<string, Part["status"]>;
-  setNewRowsStatus: React.Dispatch<React.SetStateAction<Record<string, Part["status"]>>>;
+  // newRowsStatus: Record<string, Part["status"]>;
+  // setNewRowsStatus: React.Dispatch<React.SetStateAction<Record<string, Part["status"]>>>; - usunięcie przy bublu
 }
 
 const customSelectStyles = {
@@ -91,7 +91,7 @@ const PartsTable: React.FC<Props> = ({
   const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
 
   // Nowy stan - zapamiętaj status nowego wiersza (tymczasowe ID)
-  const [newRowsStatus, setNewRowsStatus] = useState<Record<string, Part["status"]>>({});
+  // const [newRowsStatus, setNewRowsStatus] = useState<Record<string, Part["status"]>>({}); - usunięcie przy bublu
 
   const [filters, setFilters] = useState({
     partCode: "",
@@ -219,10 +219,10 @@ const PartsTable: React.FC<Props> = ({
       name: "",
       category: "",
       notes: "",
-      status: newRowsStatus[tempId] || "pending",
+      status: "pending",
     });
     // Ustaw status domyślny dla tego wiersza (opcjonalne)
-    setNewRowsStatus((prev) => ({ ...prev, [tempId]: "pending" }));
+    // setNewRowsStatus((prev) => ({ ...prev, [tempId]: "pending" })); - usunięcie przy bublu
   };
 
   const toggleSelectAll = () => {
@@ -428,16 +428,9 @@ const PartsTable: React.FC<Props> = ({
                       classNamePrefix="react-select"
                       placeholder="Status"
                       options={statusOptions}
-                      value={statusOptions.find(opt => opt.value === (newRowsStatus[part.id] ?? part.status))}
+                      value={statusOptions.find(opt => opt.value === part.status)}
                       onChange={(selected) => {
-                        setNewRowsStatus((prev) => ({
-                          ...prev,
-                          [part.id]: selected?.value as Part["status"],
-                        }));
-                        // Możesz od razu zapisać status do store jeśli chcesz: // TUTAJ ZMIANA JEDNAK NA CO INNEGO 
-                        if (!part.id.startsWith("temp-")) {
-                          updateStatus(part.id, selected?.value as Part["status"]);
-                        }
+                        updateField(part.id, "status", selected?.value as Part["status"]);
                       }}
                       isSearchable={false}
                     />
