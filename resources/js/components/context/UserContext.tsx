@@ -31,12 +31,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: userData.name,
         email: userData.email,
         avatar: userData.avatar || "/user.jpg",
-        roles: userData.role ? [userData.role] : userData.roles || ["user"],
+        roles: Array.isArray(userData.roles)
+          ? userData.roles
+          : [userData.role ?? "user"], // ← poprawka
       };
+
 
       setUser(formattedUser);
     } catch (error) {
-      console.error("❌ Błąd pobierania użytkownika:", error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("❌ Błąd pobierania użytkownika:", error.response.status, error.response.data);
+      } else {
+        console.error("❌ Nieznany błąd pobierania użytkownika:", error);
+      }
       setUser(null);
     }
   };

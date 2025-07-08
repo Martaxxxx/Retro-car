@@ -305,11 +305,14 @@ const ProjectDetails: React.FC = () => {
     const savePartsEdits = async () => {
         if (!project) return;
         setSavingParts(true);
+
         try {
-            let updatedParts: Part[] = [];
             const newParts = project.parts.filter(p => typeof p.id === "string" && p.id.startsWith("temp-"));
+            const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
+
+            const createdParts: Part[] = [];
+
             for (const part of newParts) {
-                // Jeśli partCode jest pusty, kopiuj z name!
                 const partCodeToSend = part.partCode?.trim() ? part.partCode : part.name;
                 if ((partCodeToSend ?? "").trim() && (part.name ?? "").trim()) {
                     const response = await axios.post(`/projects/${project.id}/parts`, {
@@ -319,13 +322,18 @@ const ProjectDetails: React.FC = () => {
                         notes: part.notes,
                         status: part.status,
                     });
-                    updatedParts.push({
-                        ...response.data,
+
+                    createdParts.push({
+                        id: String(response.data.id),
                         partCode: response.data.partCode || response.data.part_code || partCodeToSend,
+                        name: response.data.name,
+                        category: response.data.category,
+                        notes: response.data.notes,
+                        status: response.data.status,
                     });
                 }
             }
-            const existingParts = project.parts.filter(p => !(typeof p.id === "string" && p.id.startsWith("temp-")));
+
             await Promise.all(
                 existingParts.map(async part => {
                     await axios.put(`/parts/${part.id}`, {
@@ -334,20 +342,20 @@ const ProjectDetails: React.FC = () => {
                         notes: part.notes,
                         status: part.status,
                     });
-                    updatedParts.push(part);
                 })
             );
-            setProject((prev) =>
-                prev ? { ...prev, parts: updatedParts } : null
-            );
-            window.dispatchEvent(new Event("notifications:update"));
+
+            const allParts = [...existingParts, ...createdParts];
+            setProject(prev => prev ? { ...prev, parts: allParts } : null);
             setEditPartsMode(false);
+            window.dispatchEvent(new Event("notifications:update"));
         } catch (err) {
             alert("Błąd zapisu części: " + err);
         } finally {
             setSavingParts(false);
         }
     };
+
 
     const canEditProject = !!currentUser && Array.isArray(currentUser.roles) && (
         currentUser.roles.includes("admin") || currentUser.roles.includes("manager")

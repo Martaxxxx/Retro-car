@@ -256,7 +256,7 @@ const PartsTable: React.FC<Props> = ({
   );
 
   // Wykrycie nowego wiersza (temp id)
-  const isNewRow = (part: Part) => part.id.startsWith("temp-");
+  const isNewRow = (part: Part) => typeof part.id === "string" && part.id.startsWith("temp-");
 
   return (
     <div ref={tableRef}>
