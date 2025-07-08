@@ -40,6 +40,9 @@ interface Props {
   onEndEdit?: () => void;
   onToggleEdit: () => void;
   onGeneratePDF: () => void;
+  projectId: string;
+  newRowsStatus: Record<string, Part["status"]>;
+  setNewRowsStatus: React.Dispatch<React.SetStateAction<Record<string, Part["status"]>>>;
 }
 
 const customSelectStyles = {
@@ -75,6 +78,7 @@ const PartsTable: React.FC<Props> = ({
   onEndEdit,
   onToggleEdit,
   onGeneratePDF,
+  projectId,
 }) => {
   const [isQRCodeReady, setQRCodeReady] = useState(false);
   const [selectedQR, setSelectedQR] = useState<string | null>(null);
@@ -204,10 +208,10 @@ const PartsTable: React.FC<Props> = ({
   // Dodawanie wiersza w trybie edycji, status domyślny, ale można go zmienić od razu!
   const handleAddPart = () => {
     if (!editMode) return;
-    const brandLetter = projectName.charAt(0).toUpperCase() || "X";
-    const projectCode = projectName.split(" ").pop()?.toUpperCase() || "XX";
-    const nextNumber = String(parts.length + 1).padStart(3, "0");
-    const newPartCode = `${brandLetter}${projectCode}-${nextNumber}`;
+    const nextNumber = String(
+      parts.filter(p => !p.id.startsWith("temp-")).length + 1
+    ).padStart(3, "0");
+    const newPartCode = `${projectId}-${nextNumber}`;
     const tempId = `temp-${Date.now()}`;
     addPart({
       id: tempId,

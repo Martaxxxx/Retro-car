@@ -45,13 +45,13 @@ class PartController extends Controller
 
     $part = Part::create($data);
 
-        $data['notes'] = $data['notes'] ?? '';
+        // $data['notes'] = $data['notes'] ?? '';
 
-        $project = Project::findOrFail($projectId);
-        $data['project_id'] = $projectId;
-        $data['qr_code_data'] = "{$project->name}, {$data['part_code']}, {$data['name']}";
+        // $project = Project::findOrFail($projectId);
+        // $data['project_id'] = $projectId;
+        // $data['qr_code_data'] = "{$project->name}, {$data['part_code']}, {$data['name']}";
 
-        $part = Part::create($data);
+        // $part = Part::create($data);
 
         $user = auth()->user();
         if (!$user) {

@@ -64,6 +64,7 @@ const ProjectDetails: React.FC = () => {
     const [userIds, setUserIds] = useState<number[]>([]);
     const [savingParts, setSavingParts] = useState(false);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+    const [newRowsStatus, setNewRowsStatus] = useState<Record<string, Part["status"]>>({});
 
     const navigate = useNavigate();
 
@@ -324,13 +325,14 @@ const ProjectDetails: React.FC = () => {
 
             for (const part of newParts) {
                 const partCodeToSend = part.partCode?.trim() ? part.partCode : part.name;
+                const effectiveStatus = newRowsStatus[part.id] ?? part.status;
                 if ((partCodeToSend ?? "").trim() && (part.name ?? "").trim()) {
                     const response = await axios.post(`/projects/${project.id}/parts`, {
                         part_code: partCodeToSend,
                         name: part.name,
                         category: part.category,
                         notes: part.notes,
-                        status: part.status,
+                        status: effectiveStatus,
                     });
 
                     createdParts.push({
@@ -563,23 +565,26 @@ const ProjectDetails: React.FC = () => {
                     <Suspense fallback={<div>Ładowanie części...</div>}>
                         {currentUser?.roles && !currentUser.roles.includes("purchaser") && (
                             <PartsTable
-                                parts={project.parts}
-                                updateStatus={updateStatus}
-                                updateField={updateField}
-                                addPart={addPart}
-                                removePart={removePart}
-                                editMode={editPartsMode}
-                                projectName={project.name}
-                                onEndEdit={async () => {
-                                    await savePartsEdits();
-                                }}
-                                onToggleEdit={() => setEditPartsMode((prev) => !prev)}
-                                onGeneratePDF={() =>
-                                    generateProjectDetails(
-                                        project,
-                                        currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
-                                    )
-                                }
+                            parts={project.parts}
+                            updateStatus={updateStatus}
+                            updateField={updateField}
+                            addPart={addPart}
+                            removePart={removePart}
+                            editMode={editPartsMode}
+                            projectName={project.name}
+                            projectId={project.id.toString()}
+                            onEndEdit={async () => {
+                                await savePartsEdits();
+                            }}
+                            onToggleEdit={() => setEditPartsMode((prev) => !prev)}
+                            onGeneratePDF={() =>
+                                generateProjectDetails(
+                                project,
+                                currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
+                                )
+                            }
+                            newRowsStatus={newRowsStatus}
+                            setNewRowsStatus={setNewRowsStatus}
                             />
                         )}
                     </Suspense>
