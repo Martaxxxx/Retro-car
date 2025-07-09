@@ -200,14 +200,24 @@ const PartsTable: React.FC<Props> = ({
     setCurrentPage(1);
   };
 
-  // Dodawanie wiersza w trybie edycji, status domyślny "pending"
   const handleAddPart = () => {
     if (!editMode) return;
-    const nextNumber = String(
-      parts.filter(p => !p.id.startsWith("temp-")).length + 1
-    ).padStart(3, "0");
-    const newPartCode = `${projectId}-${nextNumber}`;
-    const tempId = `temp-${Date.now()}`;
+  
+    // Zlicz wszystkie części (zatwierdzone i tymczasowe), które zaczynają się od kodu tego projektu
+    const existingNumbers = parts
+      .filter(p => p.partCode.startsWith(`${projectId}-`))
+      .map(p => parseInt(p.partCode.split("-")[1], 10))
+      .filter(n => !isNaN(n));
+  
+    // Wyznacz pierwszy wolny numer (np. 1,2,4 -> daje 3 jeśli dodać nowy)
+    let nextNumber = 1;
+    while (existingNumbers.includes(nextNumber)) {
+      nextNumber++;
+    }
+    const nextNumberStr = String(nextNumber).padStart(3, "0");
+    const newPartCode = `${projectId}-${nextNumberStr}`;
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+  
     addPart({
       id: tempId,
       partCode: newPartCode,
@@ -217,6 +227,7 @@ const PartsTable: React.FC<Props> = ({
       status: "pending",
     });
   };
+  
 
   const toggleSelectAll = () => {
     if (selectAll) {
