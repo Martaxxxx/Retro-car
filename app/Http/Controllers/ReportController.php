@@ -20,17 +20,17 @@ class ReportController extends Controller
 
         foreach ($projects as $project) {
             $shoppingList = ShoppingItem::where('project_id', $project->id)
-    ->when($startDate, fn($q) => $q->where('created_at', '>=', $startDate))
-    ->when($endDate, fn($q) => $q->where('created_at', '<=', $endDate))
-    ->get()
-    ->map(fn($item) => [
-        'id' => $item->id,
-        'name' => $item->name,
-        'priceNet' => $item->priceNet,
-        'priceGross' => $item->priceGross,
-        'status' => $item->status,
-        'createdAt' => optional($item->created_at)->toDateString(),
-    ]);
+                ->when($startDate, fn($q) => $q->where('created_at', '>=', $startDate))
+                ->when($endDate, fn($q) => $q->where('created_at', '<=', $endDate))
+                ->get()
+                ->map(fn($item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'priceNet' => $item->priceNet,
+                    'priceGross' => $item->priceGross,
+                    'status' => $item->status,
+                    'createdAt' => optional($item->created_at)->toDateString(),
+                ]);
             $result[] = [
                 'id' => $project->id,
                 'name' => $project->name,
@@ -38,7 +38,20 @@ class ReportController extends Controller
             ];
         }
 
-        return response()->json(['projects' => $result]);
+        // Dane zalogowanego użytkownika z /api/user
+        $user = auth()->user();
+        $userData = $user ? [
+            'id' => $user->id,
+            'name' => $user->name ?? "",
+            'surname' => $user->surname ?? "",
+            'email' => $user->email ?? "",
+            'roles' => method_exists($user, 'roles') ? $user->roles : (property_exists($user, 'roles') ? $user->roles : []),
+        ] : null;
+
+        return response()->json([
+            'projects' => $result,
+            'user' => $userData,
+        ]);
     }
 
     public function progressData(Request $request)
@@ -68,6 +81,19 @@ class ReportController extends Controller
             ];
         }
 
-        return response()->json(['projects' => $result]);
+        // Dane zalogowanego użytkownika z /api/user
+        $user = auth()->user();
+        $userData = $user ? [
+            'id' => $user->id,
+            'name' => $user->name ?? "",
+            'surname' => $user->surname ?? "",
+            'email' => $user->email ?? "",
+            'roles' => method_exists($user, 'roles') ? $user->roles : (property_exists($user, 'roles') ? $user->roles : []),
+        ] : null;
+
+        return response()->json([
+            'projects' => $result,
+            'user' => $userData,
+        ]);
     }
 }

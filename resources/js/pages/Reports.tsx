@@ -7,8 +7,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import robotoFont from "../styles/fonts/Roboto_Italic";
 import * as XLSX from "xlsx";
-import axios from "../axios"; 
-import { useUser } from "../components/context/UserContext"; 
+import axios from "../axios";
 
 type ShoppingItem = {
   id: string;
@@ -24,6 +23,14 @@ type ProjectData = {
   name: string;
   shoppingList?: ShoppingItem[];
   parts?: { status: "pending" | "ready" | "installed" }[];
+};
+
+type ApiUser = {
+  id: number;
+  name?: string;
+  surname?: string;
+  email?: string;
+  roles?: string[];
 };
 
 const statusWeights = {
@@ -56,10 +63,8 @@ const ReportsPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [reportType, setReportType] = useState<"costs" | "progress" | "">("");
+  const [user, setUser] = useState<ApiUser | null>(null);
 
-  const { user } = useUser(); // Dodane
-
-  // Pobierz projekty z backendu i zmapuj shopping_items na shoppingList
   useEffect(() => {
     axios.get("/projects")
       .then(res => {
@@ -70,6 +75,12 @@ const ReportsPage: React.FC = () => {
         setAllProjects(mapped);
       })
       .catch(err => console.error("Błąd pobierania projektów:", err));
+  }, []);
+
+  useEffect(() => {
+    axios.get("/api/user")
+      .then(res => setUser(res.data))
+      .catch(() => setUser(null));
   }, []);
 
   const handleCheckboxChange = (id: string) => {
@@ -93,6 +104,7 @@ const ReportsPage: React.FC = () => {
       <button
         style={{ background: "none", border: "none", fontSize: "20px" }}
         onClick={decreaseMonth}
+        type="button"
       >
         ‹
       </button>
@@ -105,6 +117,7 @@ const ReportsPage: React.FC = () => {
       <button
         style={{ background: "none", border: "none", fontSize: "20px" }}
         onClick={increaseMonth}
+        type="button"
       >
         ›
       </button>
@@ -164,7 +177,7 @@ const ReportsPage: React.FC = () => {
     doc.setFont("Roboto", "normal");
 
     const marginLeft = 20;
-    const logo = new Image();
+    const logo = new window.Image();
     logo.src = `${window.location.origin}/retro3.png`;
     doc.addImage(logo, "PNG", 180, 10, 20, 18);
 
@@ -216,8 +229,12 @@ const ReportsPage: React.FC = () => {
     });
 
     doc.setFontSize(10);
-    const now = new Date().toLocaleDateString("pl-PL");
-    doc.text(`Wygenerowano przez: Marta Kowalska`, 10, doc.internal.pageSize.height - 16);
+    const now = new Date().toLocaleString("pl-PL");
+    const userName =
+      user && (user.name || user.surname)
+        ? `${user.name ?? ""} ${user.surname ?? ""}`.trim()
+        : user?.email ?? "Nieznany użytkownik";
+    doc.text(`Wygenerowano przez: ${userName}`, 10, doc.internal.pageSize.height - 16);
     doc.text(`Data wygenerowania: ${now}`, 10, doc.internal.pageSize.height - 10);
 
     doc.save(`raport_postepow.pdf`);
@@ -291,7 +308,7 @@ const ReportsPage: React.FC = () => {
     doc.setFont("Roboto", "normal");
 
     const marginLeft = 20;
-    const logo = new Image();
+    const logo = new window.Image();
     logo.src = `${window.location.origin}/retro3.png`;
     doc.addImage(logo, "PNG", 180, 10, 20, 18);
 
@@ -382,9 +399,13 @@ const ReportsPage: React.FC = () => {
       },
     });
 
-    const now = new Date().toLocaleDateString("pl-PL");
+    const now = new Date().toLocaleString("pl-PL");
+    const userName =
+      user && (user.name || user.surname)
+        ? `${user.name ?? ""} ${user.surname ?? ""}`.trim()
+        : user?.email ?? "Nieznany użytkownik";
     doc.setFontSize(10);
-    doc.text(`Wygenerowano przez: Marta Kowalska`, 10, doc.internal.pageSize.height - 16);
+    doc.text(`Wygenerowano przez: ${userName}`, 10, doc.internal.pageSize.height - 16);
     doc.text(`Data wygenerowania: ${now}`, 10, doc.internal.pageSize.height - 10);
 
     doc.save(`raport_zakupow.pdf`);
@@ -445,7 +466,6 @@ const ReportsPage: React.FC = () => {
   // ----------- BLOKADA RAPORTU KOSZTÓW DLA ZWYKŁEGO USERA -----------
   const isCostReportVisible = !!user?.roles && !user.roles.includes("user");
 
-  // Jeśli user nie jest jeszcze załadowany, możesz pokazać loader albo oba radio
   if (!user) {
     return (
       <>
