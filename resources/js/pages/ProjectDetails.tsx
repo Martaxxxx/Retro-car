@@ -238,7 +238,7 @@ const ProjectDetails: React.FC = () => {
         axios
         .put(`/parts/${partId}`, { [field]: value })
         .catch((err) =>
-            console.error(`❌ Błąd przy aktualizacji pola ${field}:`, err)
+            console.error(` Błąd przy aktualizacji pola ${field}:`, err)
         );
     }
     };
@@ -357,7 +357,7 @@ const ProjectDetails: React.FC = () => {
                 })
             );
 
-            // ✅ Finalna aktualizacja bez temp-*:
+            //  Finalna aktualizacja bez temp-*:
             setProject(prev =>
             prev
                 ? {

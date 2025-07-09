@@ -365,7 +365,7 @@ const PartsTable: React.FC<Props> = ({
                       }
                     }}
                   >
-                    {/* QR będzie renderowany przez skrypt */}
+                    {}
                   </div>
                 ) : (
                   <span className="text-muted" style={{ fontSize: "0.8rem" }}>Uzupełnij dane</span>

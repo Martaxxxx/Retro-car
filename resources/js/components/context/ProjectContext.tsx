@@ -17,7 +17,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const response = await axios.get("/projects");
             setProjects(response.data);
         } catch (error) {
-            console.error("❌ Błąd pobierania projektów:", error);
+            console.error(" Błąd pobierania projektów:", error);
         }
     };
 

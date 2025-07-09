@@ -22,9 +22,9 @@ class UserSettingsController extends Controller
             'password' => 'nullable|string|min:6|confirmed',
         ]);
 
-        // 📸 Obsługa avatara (jeśli przesłano plik)
+        //  Obsługa avatara (jeśli przesłano plik)
         if ($request->hasFile('avatar')) {
-            // 🗑️ Usuń stary avatar
+            //  Usuń stary avatar
             if ($user->avatar && str_starts_with($user->avatar, '/storage/uploads/avatars/')) {
                 $oldAvatar = str_replace('/storage/', storage_path('app/public/'), $user->avatar);
                 if (File::exists($oldAvatar)) {
@@ -32,7 +32,7 @@ class UserSettingsController extends Controller
                 }
             }
 
-            // 📥 Zapisz nowy avatar
+            //  Zapisz nowy avatar
             $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
         }

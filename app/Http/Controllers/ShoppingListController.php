@@ -189,7 +189,7 @@ class ShoppingListController extends Controller
             'project_id' => $projectId,
             'sender_id' => auth()->id(),
             'text' => $text,
-            'type' => 'shopping', // <--- KLUCZOWE!
+            'type' => 'shopping', 
         ]);
         $purchasers = User::where('role', 'purchaser')->pluck('id')->all();
         $notification->users()->sync($purchasers);

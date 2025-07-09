@@ -71,7 +71,7 @@ class UserController extends Controller
         $user->role = $validated['role'];
 
         if ($request->hasFile('avatar')) {
-            // 🗑️ Usuń stary avatar jeśli istnieje i nie jest domyślny
+            //  Usuń stary avatar 
             if ($user->avatar && str_starts_with($user->avatar, '/storage/uploads/avatars/')) {
                 $oldPath = str_replace('/storage/', storage_path('app/public/'), $user->avatar);
                 if (File::exists($oldPath)) {
@@ -79,7 +79,7 @@ class UserController extends Controller
                 }
             }
 
-            // 📥 Zapisz nowy avatar
+            //  Zapisz nowy avatar
             $path = $request->file('avatar')->store('uploads/avatars', 'public');
             $user->avatar = '/storage/' . $path;
         }

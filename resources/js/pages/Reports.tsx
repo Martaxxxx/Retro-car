@@ -7,8 +7,8 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import robotoFont from "../styles/fonts/Roboto_Italic";
 import * as XLSX from "xlsx";
-import axios from "../axios"; // dostosuj ścieżkę jeśli inna
-import { useUser } from "../components/context/UserContext"; // Dodaj import!
+import axios from "../axios"; 
+import { useUser } from "../components/context/UserContext"; 
 
 type ShoppingItem = {
   id: string;

@@ -43,12 +43,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
-          console.warn("🚫 Sesja wygasła – użytkownik niezalogowany.");
+          console.warn(" Sesja wygasła – użytkownik niezalogowany.");
         } else {
-          console.error("❌ Błąd pobierania użytkownika:", error.response?.data || error.message);
+          console.error(" Błąd pobierania użytkownika:", error.response?.data || error.message);
         }
       } else {
-        console.error("❌ Nieznany błąd pobierania użytkownika:", error);
+        console.error(" Nieznany błąd pobierania użytkownika:", error);
       }
     } finally {
       setIsLoadingUser(false);

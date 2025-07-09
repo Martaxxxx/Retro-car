@@ -28,9 +28,9 @@ class AuthController extends Controller
                     'user_agent' => $request->header('User-Agent'),
                 ]);
 
-                Log::info('✅ Zapisano logowanie do bazy, ID: ' . $log->id);
+                Log::info(' Zapisano logowanie do bazy, ID: ' . $log->id);
             } catch (\Exception $e) {
-                Log::error('❌ Błąd przy zapisie logowania: ' . $e->getMessage());
+                Log::error(' Błąd przy zapisie logowania: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -39,7 +39,7 @@ class AuthController extends Controller
             ]);
         }
 
-        Log::warning('🚫 Nieudana próba logowania dla: ' . $request->input('email'));
+        Log::warning(' Nieudana próba logowania dla: ' . $request->input('email'));
 
         return response()->json([
             'message' => 'Nieprawidłowe dane logowania',
