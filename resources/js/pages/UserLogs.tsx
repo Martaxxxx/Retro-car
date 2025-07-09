@@ -139,16 +139,28 @@ const UserLogs: React.FC = () => {
         </div>
 
         {/* Paginacja */}
-        <div className="mt-3 text-center">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              className={`btn btn-sm mx-1 ${page === currentPage ? "btn-primary" : "btn-outline-primary"}`}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          ))}
+        <div className="pagination-custom mt-1 text-center">
+          <span
+            className={`arrow ${currentPage === 1 ? "disabled" : ""}`}
+            onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+            role="button"
+            aria-label="Poprzednia strona"
+            tabIndex={0}
+          >
+            &#8592;
+          </span>
+          <span className="page-count">
+            {currentPage} / {totalPages}
+          </span>
+          <span
+            className={`arrow ${currentPage === totalPages ? "disabled" : ""}`}
+            onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+            role="button"
+            aria-label="Następna strona"
+            tabIndex={0}
+          >
+            &#8594;
+          </span>
         </div>
       </div>
     </>

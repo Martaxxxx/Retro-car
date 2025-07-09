@@ -6,11 +6,11 @@
     border: none !important;
 }
 
-    .btn-custom:hover,
-    .btn.btn-danger:hover {
-        background-color: #7b1e2b !important;
-        color: white !important;
-    }
+.btn-custom:hover,
+.btn.btn-danger:hover {
+    background-color: #7b1e2b !important;
+    color: white !important;
+}
 
 .bg-custom {
     background-color: #9C2F3B !important;
@@ -41,14 +41,14 @@ select,
     color: black !important;
 }
 
-    select:focus,
-    .form-select:focus,
-    select:hover,
-    .form-select:hover {
-        border-color: #9C2F3B !important;
-        box-shadow: none !important;
-        outline: none !important;
-    }
+select:focus,
+.form-select:focus,
+select:hover,
+.form-select:hover {
+    border-color: #9C2F3B !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
 
 /* Opcje */
 option {
@@ -56,12 +56,12 @@ option {
     color: black !important;
 }
 
-    option:checked,
-    select option:hover,
-    select option:focus {
-        background-color: #9C2F3B !important;
-        color: white !important;
-    }
+option:checked,
+select option:hover,
+select option:focus {
+    background-color: #9C2F3B !important;
+    color: white !important;
+}
 
 /* Stylizacja customowej tabeli */
 .custom-table {
@@ -73,45 +73,45 @@ option {
     border-spacing: 0;
 }
 
-    .custom-table thead {
-        background-color: #9C2F3B;
-        color: white;
-        font-size: 1.1rem;
-        font-weight: bold;
-    }
+.custom-table thead {
+    background-color: #9C2F3B;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
 
-    .custom-table tbody tr {
-        border-bottom: 1px solid #ddd;
-        color: black;
-    }
+.custom-table tbody tr {
+    border-bottom: 1px solid #ddd;
+    color: black;
+}
 
-        .custom-table tbody tr:hover {
-            background-color: #f5f5f5;
-        }
+.custom-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
 
-    .custom-table th,
-    .custom-table td {
-        padding: 16px;
-        text-align: center;
-        vertical-align: middle;
-    }
+.custom-table th,
+.custom-table td {
+    padding: 16px;
+    text-align: center;
+    vertical-align: middle;
+}
 
-    /* Zaokrąglenia rogów tabeli */
-    .custom-table thead:first-child tr:first-child th:first-child {
-        border-top-left-radius: 12px;
-    }
+/* Zaokrąglenia rogów tabeli */
+.custom-table thead:first-child tr:first-child th:first-child {
+    border-top-left-radius: 12px;
+}
 
-    .custom-table thead:first-child tr:first-child th:last-child {
-        border-top-right-radius: 12px;
-    }
+.custom-table thead:first-child tr:first-child th:last-child {
+    border-top-right-radius: 12px;
+}
 
-    .custom-table tbody tr:last-child td:first-child {
-        border-bottom-left-radius: 12px;
-    }
+.custom-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
 
-    .custom-table tbody tr:last-child td:last-child {
-        border-bottom-right-radius: 12px;
-    }
+.custom-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
 
 /* Stylizacja inputów */
 input:focus,
@@ -144,9 +144,9 @@ textarea:hover,
     font-size: 1rem;
 }
 
-    .btn-bordo:hover {
-        background-color: #7b1e2b;
-    }
+.btn-bordo:hover {
+    background-color: #7b1e2b;
+}
 
 .btn-black {
     background-color: black;
@@ -157,9 +157,9 @@ textarea:hover,
     font-size: 1rem;
 }
 
-    .btn-black:hover {
-        background-color: #333;
-    }
+.btn-black:hover {
+    background-color: #333;
+}
 
 /* Stylizacja kart/projektów */
 .table-dark {
@@ -172,10 +172,10 @@ textarea:hover,
     color: #000;
 }
 
-    .btn-outline-danger:hover {
-        background-color: #000;
-        color: white;
-    }
+.btn-outline-danger:hover {
+    background-color: #000;
+    color: white;
+}
 
 .hover-black:hover {
     background-color: #9C2F3B;
@@ -187,9 +187,9 @@ textarea:hover,
     background-color: #9C2F3B;
 }
 
-    .btn-primary:hover {
-        background-color: #7b1e2b;
-    }
+.btn-primary:hover {
+    background-color: #7b1e2b;
+}
 
 .filter-icon {
     margin-left: 30px;
@@ -266,48 +266,99 @@ button.btn-secondary {
     transition: border-color 0.2s ease;
 }
 
-    .custom-input:hover {
-        border-color: #7c1f2c;
-    }
-    .icon-edit-btn {
-        background: none;
-        border: none;
-        color: #0b0b0b; 
-        padding: 4px 8px;
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: color 0.15s;
-        vertical-align: middle;
-        line-height: 1;
-        box-shadow: none;
-    }
-    .icon-edit-btn:hover {
-        color: #0b0b0b; 
-    }
+.custom-input:hover {
+    border-color: #7c1f2c;
+}
 
-    .icon-remove-btn svg.bi,
-    svg.bi {
-        fill: #9C2F3B !important;
-    }
-    .icon-remove-btn:hover svg.bi,
-    .icon-remove-btn:hover svg.bi-trash,
-    .icon-remove-btn:hover svg.bi-trash3 {
-        fill: #7b1e2b !important;
-    }
+.icon-edit-btn {
+    background: none;
+    border: none;
+    color: #0b0b0b;
+    padding: 4px 8px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.15s;
+    vertical-align: middle;
+    line-height: 1;
+    box-shadow: none;
+}
 
-    .icon-actions {
-        display: flex;
-        align-items: center;     /* wyśrodkuj pionowo w komórce */
-        justify-content: center; /* wyśrodkuj poziomo */
-        gap: 16px;               /* odstęp między ikonami, zmień np. na 12px */
-        height: 100%;            /* żeby flex działał na całą wysokość komórki */
-      }
-      .icon-actions button {
-        background: none;
-        border: none;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-      }
-      
+.icon-edit-btn:hover {
+    color: #0b0b0b;
+}
+
+.icon-remove-btn svg.bi,
+svg.bi {
+    fill: #9C2F3B !important;
+}
+
+.icon-remove-btn:hover svg.bi,
+.icon-remove-btn:hover svg.bi-trash,
+.icon-remove-btn:hover svg.bi-trash3 {
+    fill: #7b1e2b !important;
+}
+
+.icon-actions {
+    display: flex;
+    align-items: center;
+    /* wyśrodkuj pionowo w komórce */
+    justify-content: center;
+    /* wyśrodkuj poziomo */
+    gap: 16px;
+    /* odstęp między ikonami, zmień np. na 12px */
+    height: 100%;
+    /* żeby flex działał na całą wysokość komórki */
+}
+
+.icon-actions button {
+    background: none;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.pagination-custom {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-size: 2rem;
+    margin: 16px 0;
+    user-select: none;
+}
+
+.pagination-custom .arrow {
+    color: #9C2F3B;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.1s;
+    font-size: 2.2rem;
+    line-height: 1;
+    padding: 0 8px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    outline: none;
+}
+
+.pagination-custom .arrow:hover:not(.disabled) {
+    color: #7b1e2b;
+    transform: scale(1.15);
+}
+
+.pagination-custom .arrow.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.pagination-custom .page-count {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #222;
+    min-width: 20px;
+    text-align: center;
+    letter-spacing: 1px;
+}
