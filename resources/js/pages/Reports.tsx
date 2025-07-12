@@ -463,7 +463,7 @@ const ReportsPage: React.FC = () => {
     XLSX.writeFile(workbook, "raport_zakupow.xlsx");
   };
 
-  // ----------- BLOKADA RAPORTU KOSZTÓW DLA ZWYKŁEGO USERA -----------
+  //BLOKADA RAPORTU KOSZTÓW DLA ZWYKŁEGO USERA
   const isCostReportVisible = !!user?.roles && !user.roles.includes("user");
 
   if (!user) {

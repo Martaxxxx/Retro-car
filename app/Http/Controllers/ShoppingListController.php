@@ -116,7 +116,7 @@ class ShoppingListController extends Controller
         $projectId = $item->project_id;
         $itemName = $item->name;
 
-        // ✅ Usuń tylko powiązane pliki
+        // Usuń tylko powiązane pliki
         foreach ($item->invoices ?? [] as $file) {
             $relativePath = str_replace('/storage/', '', $file['url']);
             Storage::disk('public')->delete($relativePath);

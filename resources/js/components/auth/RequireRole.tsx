@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 
 interface Props {
-    roles?: string[]; // jeśli brak: wystarczy, że user jest zalogowany
+    roles?: string[];
     children: React.ReactNode;
 }
 
@@ -11,7 +11,7 @@ const RequireRole: React.FC<Props> = ({ roles, children }) => {
     const { user, isLoadingUser } = useUser();
 
     if (isLoadingUser) {
-        return null; // lub spinner
+        return null;
     }
 
     if (!user) {

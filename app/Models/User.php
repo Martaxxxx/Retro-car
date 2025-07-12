@@ -19,8 +19,6 @@ class User extends Authenticatable
         'avatar',
     ];
 
-    // protected $visible = ['id', 'name', 'surname'];
-
     protected $hidden = [
         'password',
         'remember_token',
@@ -34,7 +32,6 @@ class User extends Authenticatable
         ];
     }
 
-    // POPRAWNA RELACJA:
     public function notifications()
     {
         return $this->belongsToMany(Notification::class, 'notification_user')

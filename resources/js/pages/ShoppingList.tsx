@@ -23,24 +23,17 @@ const ShoppingList: React.FC = () => {
     const { projectId } = useParams<{ projectId: string }>();
     const navigate = useNavigate();
     const { projects } = useProjectContext();
-
     const [editMode, setEditMode] = useState(false);
     const [showSummary, setShowSummary] = useState(true);
-
-    // ZATWIERDZONE dane (do podsumowania i PDF)
     const [itemsSaved, setItemsSaved] = useState<ShoppingItem[]>([]);
-    // EDYTOWANE dane (do tabeli w trybie edycji)
     const [itemsDraft, setItemsDraft] = useState<ShoppingItem[]>([]);
-
     const [localNewRows, setLocalNewRows] = useState<LocalNewRow[]>([]);
     const [addError, setAddError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [fallbackProject, setFallbackProject] = useState<Project | null>(null);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-
     const [showNameRequiredAlert, setShowNameRequiredAlert] = useState(false);
     const addButtonRef = useRef<HTMLButtonElement>(null);
-
     const contextProject = projects.find(p => String(p.id) === String(projectId));
     const project = contextProject || fallbackProject;
 
@@ -70,7 +63,6 @@ const ShoppingList: React.FC = () => {
         }
     }, [contextProject, projectId]);
 
-    // Pobierz ZATWIERDZONE pozycje (do podsumowania i PDF)
     const fetchSavedItems = async () => {
         if (!projectId) return;
         setLoading(true);
@@ -78,7 +70,7 @@ const ShoppingList: React.FC = () => {
             const res = await axios.get(`/projects/${projectId}/shopping-items`);
             const data = Array.isArray(res.data) ? res.data : [];
             setItemsSaved(data);
-            setItemsDraft(data); // domyślny draft to kopia "zatwierdzonych"
+            setItemsDraft(data);
         } catch {
             setItemsSaved([]);
             setItemsDraft([]);
@@ -192,7 +184,7 @@ const ShoppingList: React.FC = () => {
             alert("Nazwa pozycji jest wymagana!");
         }
         setLocalNewRows([]);
-        // Po zapisie odśwież całą listę (żeby nie dublować z drafcie)
+        // Po zapisie odśwież całą listę
         await fetchSavedItems();
     };
 

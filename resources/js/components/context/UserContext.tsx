@@ -14,7 +14,7 @@ interface UserContextType {
   setUser: (user: User | null) => void;
   fetchUser: () => Promise<void>;
   logout: () => void;
-  isLoadingUser: boolean; // ← NOWE
+  isLoadingUser: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -61,7 +61,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    fetchUser(); // ← BEZ sprawdzania tokena
+    fetchUser();
   }, []);
 
   useEffect(() => {

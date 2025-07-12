@@ -59,16 +59,12 @@ const Renovations: React.FC = () => {
     const [sortBy, setSortBy] = useState("");
     const [onlyMine, setOnlyMine] = useState(false);
     const [showFilters, setShowFilters] = useState(true);
-
-    // Zakres roczników na podstawie danych z bazy (nie zmienia się po przesuwaniu suwaka)
     const [yearRange, setYearRange] = useState<[number, number]>([1885, new Date().getFullYear()]);
-    // Wybrane przez użytkownika wartości suwaka (zmieniają się natychmiast)
     const [selectedYear, setSelectedYear] = useState<[number, number]>([1885, new Date().getFullYear()]);
-
     const [visibleCount, setVisibleCount] = useState(10);
     const [userId, setUserId] = useState<string | null>(null);
 
-// ⬇️ 1. Najpierw pobieramy userId od razu po załadowaniu komponentu
+//1. Najpierw pobieramy userId od razu po załadowaniu komponentu
 useEffect(() => {
   axios.get("/api/user")
     .then(res => {
@@ -77,7 +73,7 @@ useEffect(() => {
     .catch(() => setUserId(null));
 }, []);
 
-// ⬇️ 2. Dopiero gdy mamy userId, pobieramy projekty
+//2. Dopiero gdy mamy userId, pobieramy projekty
 useEffect(() => {
   if (!userId) return;
 

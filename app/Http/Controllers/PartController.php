@@ -34,7 +34,7 @@ class PartController extends Controller
         'name' => 'required|string|max:255',
         'category' => 'nullable|string|max:255',
         'notes' => 'nullable|string',
-        'status' => 'nullable|in:pending,ready,installed', // <-- TUTAJ!
+        'status' => 'nullable|in:pending,ready,installed',
     ]);
 
     $data['notes'] = $data['notes'] ?? '';
@@ -44,14 +44,6 @@ class PartController extends Controller
     $data['qr_code_data'] = "{$project->name}, {$data['part_code']}, {$data['name']}";
 
     $part = Part::create($data);
-
-        // $data['notes'] = $data['notes'] ?? '';
-
-        // $project = Project::findOrFail($projectId);
-        // $data['project_id'] = $projectId;
-        // $data['qr_code_data'] = "{$project->name}, {$data['part_code']}, {$data['name']}";
-
-        // $part = Part::create($data);
 
         $user = auth()->user();
         if (!$user) {
@@ -87,7 +79,7 @@ class PartController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'category' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            'status' => 'nullable|in:pending,ready,installed', // <-- status już nie jest wymagany!
+            'status' => 'nullable|in:pending,ready,installed',
         ]);
 
         $data['notes'] = $data['notes'] ?? '';

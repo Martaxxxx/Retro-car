@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('parts', function (Blueprint $table) {
-            $table->dropColumn('qr_code_data'); // przywracamy stan sprzed migracji
+            $table->dropColumn('qr_code_data');
         });
     }
 };

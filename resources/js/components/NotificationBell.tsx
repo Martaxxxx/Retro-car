@@ -114,7 +114,7 @@ type Notification = {
 };
 
 type Props = {
-  userId: number; // przekazuj aktualnego usera (np. z kontekstu)
+  userId: number;
 };
 
 const NotificationBell: React.FC<Props> = ({ userId }) => {

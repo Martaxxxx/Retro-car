@@ -149,7 +149,7 @@ const ShoppingListTable: React.FC<Props> = ({
 
         await onLoadInvoices(id);
 
-        // 🔁 Odśwież modal – zamknij i otwórz na nowo
+        // Odśwież modal – zamknij i otwórz na nowo
         setActiveItemId(null);
         setTimeout(() => setActiveItemId(id), 0);
     };

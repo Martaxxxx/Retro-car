@@ -1,11 +1,11 @@
 import React from "react";
-import { Project } from "../types/Project"; // jeśli masz tam typy
+import { Project } from "../types/Project";
 import { useProjectContext } from "./context/ProjectContext";
 
 interface Props {
     selectedProjectId: string;
     onChange: (id: string) => void;
-    dynamicProjects?: Project[]; // Możesz też przekazać ręcznie
+    dynamicProjects?: Project[];
 }
 
 const ProjectSelector: React.FC<Props> = ({
@@ -15,7 +15,6 @@ const ProjectSelector: React.FC<Props> = ({
 }) => {
     const { projects: contextProjects } = useProjectContext();
 
-    // Łączymy projekty statyczne i dynamiczne (jeśli są)
 const allProjects: Project[] = dynamicProjects ?? contextProjects ?? [];
 
     return (

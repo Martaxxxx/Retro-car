@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css"; // Import stylów domyślnych React Datepicker
-import "../styles/CalendarComponent.css"; // Import niestandardowych stylów
+import "react-datepicker/dist/react-datepicker.css";
+import "../styles/CalendarComponent.css";
 
 
 const CalendarComponent: React.FC = () => {

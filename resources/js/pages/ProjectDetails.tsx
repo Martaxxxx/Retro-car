@@ -68,7 +68,6 @@ const ProjectDetails: React.FC = () => {
 
     const navigate = useNavigate();
 
-    // Pobierz info o użytkowniku (endpoint poprawiony na /api/user!)
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
@@ -86,7 +85,6 @@ const ProjectDetails: React.FC = () => {
         fetchCurrentUser();
     }, []);
 
-    // Pobierz projekt i użytkowników (jeśli można edytować projekt)
     useEffect(() => {
         const fetchProjectAndUsers = async () => {
             try {
@@ -133,7 +131,6 @@ const ProjectDetails: React.FC = () => {
                     setFiles([]);
                 }
 
-                // Pobieraj użytkowników tylko jeśli edycja projektu jest możliwa
                 if (
                     currentUser &&
                     Array.isArray(currentUser.roles) &&
@@ -221,7 +218,6 @@ const ProjectDetails: React.FC = () => {
     field: keyof Omit<Part, "id" | "partCode">,
     value: string
     ) => {
-    // zawsze aktualizuj lokalny stan
     setProject((prev) =>
         prev
         ? {
@@ -233,7 +229,6 @@ const ProjectDetails: React.FC = () => {
         : null
     );
 
-    // tylko jeśli to NIE jest temp-id, wyślij do API
     if (!partId.startsWith("temp-")) {
         axios
         .put(`/parts/${partId}`, { [field]: value })
@@ -356,8 +351,7 @@ const ProjectDetails: React.FC = () => {
                     });
                 })
             );
-
-            //  Finalna aktualizacja bez temp-*:
+            
             setProject(prev =>
             prev
                 ? {

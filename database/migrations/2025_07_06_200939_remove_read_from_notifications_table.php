@@ -19,7 +19,7 @@ return new class extends Migration
     public function down()
     {
         Schema::table('notifications', function (Blueprint $table) {
-            $table->boolean('read')->default(false); // lub odpowiedni typ jeśli był inny
+            $table->boolean('read')->default(false);
         });
     }
 };

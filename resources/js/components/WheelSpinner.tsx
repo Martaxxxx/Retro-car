@@ -1,5 +1,5 @@
 import React from "react";
-import "../styles/Spinner.css"; // Upewnij się, że ścieżka jest poprawna
+import "../styles/Spinner.css";
 
 const WheelSpinner = () => (
   <div className="wheel-spinner">

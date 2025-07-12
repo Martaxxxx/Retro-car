@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react"; // 👈 dodaj tutaj useEffect
+﻿import React, { useState, useEffect } from "react";
 import { useProjectContext } from "../components/context/ProjectContext";
 import DatePicker from "react-datepicker";
 import Navbar from "../components/Navbar";
@@ -32,7 +32,7 @@ const ManagerPanel: React.FC = () => {
     const { fetchProjects } = useProjectContext();
     const [formData, setFormData] = useState({
         name: "",
-        image: "", // podgląd
+        image: "",
         imageFile: null as File | null,
         startDate: null as Date | null,
         endDate: null as Date | null,
@@ -96,7 +96,7 @@ const ManagerPanel: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            alert("✅ Projekt dodany!");
+            alert("Projekt dodany!");
 
             setFormData({
                 name: "",
@@ -114,8 +114,8 @@ const ManagerPanel: React.FC = () => {
 
             fetchProjects();
         } catch (error: any) {
-            console.error("❌ Błąd zapisu projektu:", error);
-            console.log("🔎 Odpowiedź backendu:", error.response?.data);
+            console.error("Błąd zapisu projektu:", error);
+            console.log("Odpowiedź backendu:", error.response?.data);
             alert("Wystąpił błąd przy zapisie.");
         }
     };

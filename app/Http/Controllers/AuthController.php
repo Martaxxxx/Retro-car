@@ -11,7 +11,7 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        Log::info('🔥 login() został wywołany');
+        Log::info('login() został wywołany');
 
         $credentials = $request->only('email', 'password');
 

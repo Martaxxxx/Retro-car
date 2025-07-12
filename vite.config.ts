@@ -5,7 +5,7 @@ import laravel from 'laravel-vite-plugin';
 export default defineConfig({
     server: {
         proxy: {
-            '/api': 'http://localhost:8000', // ← proxy dla żądań API
+            '/api': 'http://localhost:8000',
         },
     },
     plugins: [

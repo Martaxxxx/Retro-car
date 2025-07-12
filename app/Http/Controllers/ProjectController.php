@@ -21,7 +21,6 @@ class ProjectController extends Controller
 
     // Każdy projekt zamieniamy na tablicę, żeby dodać progressPercent w odpowiedzi
     $projectsArray = $projects->map(function ($project) {
-        // Możesz dodać inne pola, jeśli chcesz je jawnie przekazać
         return [
             'id' => $project->id,
             'name' => $project->name,
@@ -81,7 +80,7 @@ class ProjectController extends Controller
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
 
-            // ==== TWORZENIE POWIADOMIENIA DLA KAŻDEGO USERA ====
+            //TWORZENIE POWIADOMIENIA DLA KAŻDEGO USERA
             if (count($request->user_ids)) {
                 $notification = Notification::create([
                     'project_id' => $project->id,
@@ -90,7 +89,7 @@ class ProjectController extends Controller
                 ]);
                 $notification->users()->attach($request->user_ids, ['read' => false]);
             }
-            // ==== KONIEC POWIADOMIENIA ====
+            //KONIEC POWIADOMIENIA
         }
 
         if ($request->hasFile('image')) {
@@ -187,7 +186,7 @@ class ProjectController extends Controller
             ->orWhereRaw('CAST(year AS CHAR) LIKE ?', ['%' . $queryLower . '%'])
             ->get();
 
-        Log::info("🔍 Wyniki wyszukiwania dla zapytania [$query]:", $projects->toArray());
+        Log::info("Wyniki wyszukiwania dla zapytania [$query]:", $projects->toArray());
 
         return response()->json($projects);
     }
@@ -196,7 +195,7 @@ class ProjectController extends Controller
     {
         $decodedName = urldecode($name);
 
-        Log::info("🔍 Szukanie projektu ID [$id] z nazwą [$decodedName]");
+        Log::info("Szukanie projektu ID [$id] z nazwą [$decodedName]");
 
         $project = Project::where('id', $id)
             ->whereRaw('LOWER(name) = ?', [strtolower($decodedName)])
