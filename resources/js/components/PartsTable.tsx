@@ -277,14 +277,14 @@ const PartsTable: React.FC<Props> = ({
               onClick={handlePrintQRs}
               disabled={selectedIds.length === 0}
             >
-              <LucidePrinter size={20} color="#fff" style={{ marginRight: 6, verticalAlign: "middle" }} /> QR
+              <LucidePrinter size={20} color="#fff" style={{ marginRight: 6, verticalAlign: "middle",position: "relative",top: "-2px" }} /> QR
             </button>
           </div>
 
           {!editMode && (
             <div className="d-flex mt-md-0 ms-8 mt-2 gap-2">
               <button className="btn btn-custom" onClick={onGeneratePDF}>
-                <LucideFileText size={20} style={{ marginRight: 6, verticalAlign: "middle" }} /> Pobierz PDF
+                <LucideFileText size={20} style={{ marginRight: 6, verticalAlign: "middle",position: "relative",top: "-2px" }} /> Pobierz PDF
               </button>
               <button
                 className="btn btn-custom"
