@@ -125,10 +125,8 @@ const ProjectSlider: React.FC = () => {
   const sliderRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Dodaj sprawdzanie zalogowania
   const { user } = useUser();
 
-  // Poprawiony efekt: czyść projekty przy każdej zmianie zalogowanego usera!
   useEffect(() => {
     setProjects([]);
     setPage(1);
@@ -140,7 +138,6 @@ const ProjectSlider: React.FC = () => {
     // eslint-disable-next-line
   }, [user]);
 
-  // Dodaj parametr "reset" by nie dublować projektów gdy resetujemy
   const loadProjects = async (pageToLoad: number, reset: boolean = false) => {
     if (loading) return;
     setLoading(true);
@@ -149,8 +146,7 @@ const ProjectSlider: React.FC = () => {
       const newProjects = res.data.data || res.data;
 
       setProjects(prev => {
-        if (reset) return newProjects; // Załaduj od nowa przy zmianie usera
-        // Nie dublujemy projektów!
+        if (reset) return newProjects;
         const ids = new Set(prev.map(p => p.id));
         return [...prev, ...newProjects.filter(np => !ids.has(np.id))];
       });
@@ -187,9 +183,8 @@ const ProjectSlider: React.FC = () => {
     navigate(`/projectdetails/${id}/${encodedName}`);
   };
 
-  // Jeśli user nie jest zalogowany, nie pokazuj nic (lub np. komunikat)
   if (!user) {
-    return null; // lub: return <Container><Header>Musisz być zalogowany, by zobaczyć projekty.</Header></Container>
+    return null;
   }
 
   return (
@@ -209,8 +204,18 @@ const ProjectSlider: React.FC = () => {
               )}
               <Title>{project.name}</Title>
               <ProgressBar>
-                <Progress $progress={Math.floor(Math.random() * 60) + 30} />
+                {/* UŻYWAJ progressPercent z API! */}
+                <Progress $progress={project.progressPercent ?? 0} />
               </ProgressBar>
+              {/* Opcjonalnie, widoczna liczba procent */}
+              <div style={{
+                marginTop: 6,
+                fontSize: "13px",
+                color: "#9C2F3B",
+                fontWeight: "bold"
+              }}>
+                {project.progressPercent ?? 0}%
+              </div>
             </SlideCard>
           ))}
           {loading && (

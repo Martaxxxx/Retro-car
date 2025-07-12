@@ -40,7 +40,27 @@ class Project extends Model
     //Relacja do userów
     public function users()
     {
-    return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class);
     }
 
+    // ACCESSOR: procent ukończenia projektu
+    public function getProgressPercentAttribute()
+    {
+        $parts = $this->parts;
+        $count = $parts->count();
+
+        if ($count === 0) {
+            return 0;
+        }
+
+        $sum = $parts->sum(function ($part) {
+            switch ($part->status) {
+                case 'ready': return 50;
+                case 'installed': return 100;
+                default: return 0; // pending
+            }
+        });
+
+        return round($sum / $count);
+    }
 }

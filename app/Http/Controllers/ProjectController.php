@@ -15,10 +15,33 @@ class ProjectController extends Controller
     // odpowiada za to kto widzi projekty- wszyscy
 
     public function index()
-    {
-        $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
-        return response()->json($projects);
-    }
+{
+    // Eager load parts, bo progressPercent korzysta z parts
+    $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
+
+    // Każdy projekt zamieniamy na tablicę, żeby dodać progressPercent w odpowiedzi
+    $projectsArray = $projects->map(function ($project) {
+        // Możesz dodać inne pola, jeśli chcesz je jawnie przekazać
+        return [
+            'id' => $project->id,
+            'name' => $project->name,
+            'image' => $project->image,
+            'start_date' => $project->start_date,
+            'end_date' => $project->end_date,
+            'status' => $project->status,
+            'brand' => $project->brand,
+            'model' => $project->model,
+            'year' => $project->year,
+            'car_id' => $project->car_id,
+            'users' => $project->users,
+            'shoppingItems' => $project->shoppingItems,
+            'parts' => $project->parts,
+            'progressPercent' => $project->progress_percent, 
+        ];
+    });
+
+    return response()->json($projectsArray);
+}
     
     public function store(Request $request)
     {
@@ -115,8 +138,7 @@ class ProjectController extends Controller
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
 
-            // Możesz tu analogicznie dorobić powiadomienia o zmianie userów/projektu
-            // np. wykryć nowych userów i wysłać im notyfikację
+            
         }
 
         $project->load('users');
@@ -135,7 +157,7 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
         }
 
-        // 🔥 Usuń folder uploads/projects/project_{id}
+        //  Usuń folder uploads/projects/project_{id}
         $folderPath = storage_path("app/public/uploads/projects/project_{$id}");
         if (File::exists($folderPath)) {
             File::deleteDirectory($folderPath);

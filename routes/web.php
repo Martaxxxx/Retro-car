@@ -49,6 +49,7 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 // Projekty i renowacje – widoczne dla KAŻDEGO zalogowanego użytkownika
 Route::middleware(['auth'])->group(function () {
+    // --- TUTAJ JEST TWOJE API DLA SLIDERA ---
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::get('/renovations', [ProjectController::class, 'index']);
 

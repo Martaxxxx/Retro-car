@@ -99,7 +99,6 @@ const PartsTable: React.FC<Props> = ({
   const itemsPerPage = 25;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Scroll to "Dodaj wiersz" button when entering editMode
   useEffect(() => {
     if (editMode && addRowButtonRef.current) {
       setTimeout(() => {
@@ -108,7 +107,6 @@ const PartsTable: React.FC<Props> = ({
     }
   }, [editMode]);
 
-  // Filtered parts
   const filteredParts = parts.filter(
     (part) =>
       (part.partCode ?? "").toLowerCase().includes(filters.partCode.toLowerCase()) &&
@@ -119,13 +117,11 @@ const PartsTable: React.FC<Props> = ({
   );
   const totalPages = Math.ceil(filteredParts.length / itemsPerPage);
 
-  // Paginated parts slice
   const paginatedParts = filteredParts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Reset page to 1 if filters change and current page would be out of bounds
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(1);
@@ -202,14 +198,10 @@ const PartsTable: React.FC<Props> = ({
 
   const handleAddPart = () => {
     if (!editMode) return;
-  
-    // Zlicz wszystkie części (zatwierdzone i tymczasowe), które zaczynają się od kodu tego projektu
     const existingNumbers = parts
       .filter(p => p.partCode.startsWith(`${projectId}-`))
       .map(p => parseInt(p.partCode.split("-")[1], 10))
       .filter(n => !isNaN(n));
-  
-    // Wyznacz pierwszy wolny numer (np. 1,2,4 -> daje 3 jeśli dodać nowy)
     let nextNumber = 1;
     while (existingNumbers.includes(nextNumber)) {
       nextNumber++;
@@ -217,7 +209,6 @@ const PartsTable: React.FC<Props> = ({
     const nextNumberStr = String(nextNumber).padStart(3, "0");
     const newPartCode = `${projectId}-${nextNumberStr}`;
     const tempId = `temp-${Date.now()}-${Math.random()}`;
-  
     addPart({
       id: tempId,
       partCode: newPartCode,
@@ -227,7 +218,6 @@ const PartsTable: React.FC<Props> = ({
       status: "pending",
     });
   };
-  
 
   const toggleSelectAll = () => {
     if (selectAll) {
@@ -258,12 +248,10 @@ const PartsTable: React.FC<Props> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expandedNoteId]);
 
-  // Pokaż tylko wiersze z nazwą jeśli nie editMode
   const visibleParts = paginatedParts.filter(
     (part) => editMode || (part.name && part.name.trim() !== "")
   );
 
-  // Wykrycie nowego wiersza (temp id)
   const isNewRow = (part: Part) => typeof part.id === "string" && part.id.startsWith("temp-");
 
   return (
@@ -308,14 +296,16 @@ const PartsTable: React.FC<Props> = ({
       <table className="custom-table">
         <thead>
           <tr>
-            <th><input type="checkbox" checked={selectAll} onChange={toggleSelectAll} /></th>
-            <th>QR Kod</th>
-            <th>Kod części</th>
-            <th>Nazwa</th>
-            <th>Kategoria</th>
-            <th>Notatki</th>
-            <th>Status</th>
-            {editMode && <th>Usuń</th>}
+            <th style={{ textAlign: "center", verticalAlign: "middle", width: "60px" }}>
+              <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} />
+            </th>
+            <th style={{ textAlign: "center", verticalAlign: "middle", width: "120px" }}>QR Kod</th>
+            <th style={{ textAlign: "center", verticalAlign: "middle" }}>Kod części</th>
+            <th style={{ textAlign: "center", verticalAlign: "middle" }}>Nazwa</th>
+            <th style={{ textAlign: "center", verticalAlign: "middle" }}>Kategoria</th>
+            <th style={{ textAlign: "center", verticalAlign: "middle" }}>Notatki</th>
+            <th style={{ textAlign: "center", verticalAlign: "middle" }}>Status</th>
+            {editMode && <th style={{ textAlign: "center", verticalAlign: "middle" }}>Usuń</th>}
           </tr>
           {showFilters && (
             <tr>
@@ -351,14 +341,14 @@ const PartsTable: React.FC<Props> = ({
         <tbody>
           {visibleParts.map(part => (
             <tr key={part.id}>
-              <td>
+              <td style={{ textAlign: "center", verticalAlign: "middle", width: "60px" }}>
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(part.id)}
                   onChange={() => toggleSelectOne(part.id)}
                 />
               </td>
-              <td>
+              <td style={{ textAlign: "center", verticalAlign: "middle", width: "120px" }}>
                 {((part.partCode ?? "").trim() && (part.name ?? "").trim()) ? (
                   <div
                     id={`qrcode-${part.id}`}
@@ -376,14 +366,14 @@ const PartsTable: React.FC<Props> = ({
                       }
                     }}
                   >
-                    {}
+                    {/* QR code will be rendered here */}
                   </div>
                 ) : (
                   <span className="text-muted" style={{ fontSize: "0.8rem" }}>Uzupełnij dane</span>
                 )}
               </td>
-              <td>{part.partCode}</td>
-              <td>
+              <td style={{ textAlign: "center", verticalAlign: "middle" }}>{part.partCode}</td>
+              <td style={{ textAlign: "center", verticalAlign: "middle" }}>
                 {editMode ? (
                   <input
                     className="form-control form-control-sm"
@@ -392,7 +382,7 @@ const PartsTable: React.FC<Props> = ({
                   />
                 ) : part.name}
               </td>
-              <td>
+              <td style={{ textAlign: "center", verticalAlign: "middle" }}>
                 {editMode ? (
                   <input
                     className="form-control form-control-sm"
@@ -401,7 +391,7 @@ const PartsTable: React.FC<Props> = ({
                   />
                 ) : part.category}
               </td>
-              <td style={{ position: 'relative' }}>
+              <td style={{ position: 'relative', textAlign: "center", verticalAlign: "middle" }}>
                 {editMode ? (
                   <textarea
                     className="form-control form-control-sm"
@@ -424,7 +414,7 @@ const PartsTable: React.FC<Props> = ({
                   part.notes
                 )}
               </td>
-              <td>
+              <td style={{ textAlign: "center", verticalAlign: "middle" }}>
                 {editMode ? (
                   <Select
                     styles={customSelectStyles}
@@ -448,7 +438,7 @@ const PartsTable: React.FC<Props> = ({
                 )}
               </td>
               {editMode && (
-                <td className="text-center">
+                <td className="text-center" style={{ verticalAlign: "middle" }}>
                   <button
                     className="icon-remove-btn"
                     onClick={() => removePart(part.id)}
