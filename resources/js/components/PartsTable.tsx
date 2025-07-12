@@ -1,5 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
-import { FaFilter } from "react-icons/fa";
+import {
+  Filter as LucideFilter,
+  Printer as LucidePrinter,
+  FileText as LucideFileText,
+  Trash2 as LucideTrash2,
+  Plus as LucidePlus
+} from "lucide-react";
 import QRCodeModal from "./QRCodeModal";
 import Select from "react-select";
 import NoteModal from "./NoteModal";
@@ -261,25 +267,24 @@ const PartsTable: React.FC<Props> = ({
           <div className="d-flex align-items-center flex-wrap gap-3">
             <div className="d-flex align-items-center gap-2">
               <span style={{ fontWeight: "bold", fontSize: "1.3rem", color: "#333" }}>Filtr</span>
-              <FaFilter
+              <LucideFilter
                 style={{ cursor: "pointer", fontSize: "1.2rem", color: "#9C2F3B" }}
                 onClick={() => setShowFilters(prev => !prev)}
               />
             </div>
-
             <button
               className="btn btn-custom ms-3"
               onClick={handlePrintQRs}
               disabled={selectedIds.length === 0}
             >
-              🖨️ QR
+              <LucidePrinter size={20} color="#fff" style={{ marginRight: 6, verticalAlign: "middle" }} /> QR
             </button>
           </div>
 
           {!editMode && (
             <div className="d-flex mt-md-0 ms-8 mt-2 gap-2">
               <button className="btn btn-custom" onClick={onGeneratePDF}>
-                📄 Pobierz PDF
+                <LucideFileText size={20} style={{ marginRight: 6, verticalAlign: "middle" }} /> Pobierz PDF
               </button>
               <button
                 className="btn btn-custom"
@@ -366,7 +371,6 @@ const PartsTable: React.FC<Props> = ({
                       }
                     }}
                   >
-                    {/* QR code will be rendered here */}
                   </div>
                 ) : (
                   <span className="text-muted" style={{ fontSize: "0.8rem" }}>Uzupełnij dane</span>
@@ -444,9 +448,7 @@ const PartsTable: React.FC<Props> = ({
                     onClick={() => removePart(part.id)}
                     title="Usuń"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-trash3" viewBox="0 0 16 16">
-                      <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
-                    </svg>
+                    <LucideTrash2 size={20} color="#b03a2e" />
                   </button>
                 </td>
               )}
@@ -462,7 +464,7 @@ const PartsTable: React.FC<Props> = ({
             onClick={handleAddPart}
             ref={addRowButtonRef}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+            <LucidePlus size={24} style={{ marginRight: 6, verticalAlign: "middle" }} />
             Dodaj wiersz
           </button>
           <button

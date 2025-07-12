@@ -10,6 +10,7 @@ import { generateProjectDetails } from "../utils/generateProjectDetails";
 import axios from "../axios";
 import { Project } from "../types/Project";
 import Select from "react-select";
+import { ShoppingCart as LucideShoppingCart, FolderOpen as LucideFolderOpen, Hourglass as LucideHourglass } from "lucide-react";
 
 registerLocale("pl", pl);
 
@@ -477,13 +478,13 @@ const ProjectDetails: React.FC = () => {
                                 multiple 
                             />
                             <Link to={`/projectdetails/${project.id}/lista_zakupow`} className="btn btn-outline-dark">
-                                🛒 Lista zakupów
+                                <LucideShoppingCart size={18} style={{ marginRight: 4, marginBottom: 2, }} /> Lista zakupów
                             </Link>
                             <button 
                                 className="btn btn-outline-dark" 
                                 onClick={() => setShowFileModal(true)}
                             >
-                                📁 Moje pliki ({files.length})
+                                <LucideFolderOpen size={18} style={{ marginRight: 4, marginBottom: 2 }} />Moje pliki ({files.length})
                             </button>
                             {canEditProject && (
                                 <button 
@@ -547,7 +548,8 @@ const ProjectDetails: React.FC = () => {
                 </div>
 
                 <div className="time-left mt-4" style={{ color: "#b03a2e", fontWeight: "bold" }}>
-                    ⏳ <strong>Pozostały czas do zakończenia:</strong> {timeLeft}
+                    <LucideHourglass style={{ marginRight: 4, marginBottom: "3px" }} />
+                    <strong>Pozostały czas do zakończenia:</strong> {timeLeft}
                 </div>
 
                 {savingParts ? (

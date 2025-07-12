@@ -80,16 +80,16 @@ class ProjectController extends Controller
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
 
-            //TWORZENIE POWIADOMIENIA DLA KAŻDEGO USERA
+            
             if (count($request->user_ids)) {
                 $notification = Notification::create([
                     'project_id' => $project->id,
-                    'sender_id' => auth()->id() ?? $request->user()->id ?? 1, // lub inny id jeśli nie masz auth
+                    'sender_id' => auth()->id() ?? $request->user()->id ?? 1, 
                     'text' => 'Zostałeś dodany do projektu: ' . $project->name,
                 ]);
                 $notification->users()->attach($request->user_ids, ['read' => false]);
             }
-            //KONIEC POWIADOMIENIA
+            
         }
 
         if ($request->hasFile('image')) {
@@ -162,7 +162,7 @@ class ProjectController extends Controller
             File::deleteDirectory($folderPath);
         }
 
-        // Dopiero teraz usuń projekt z bazy
+       
         $project->delete();
 
         return response()->json(['message' => 'Projekt został usunięty.']);

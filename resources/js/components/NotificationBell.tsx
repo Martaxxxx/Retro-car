@@ -51,7 +51,7 @@ const Popup = styled.div`
 
 const NotificationItem = styled.div.withConfig({
   shouldForwardProp: (prop) => prop !== "isRead"
-})<{ isRead: boolean }>`
+}) <{ isRead: boolean }>`
   padding: 8px 0;
   font-size: 14px;
   color: ${({ isRead }) => (isRead ? "#aaa" : "#333")};
@@ -123,7 +123,7 @@ const NotificationBell: React.FC<Props> = ({ userId }) => {
   const [limit, setLimit] = useState(20);
   const bellRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications and REPLACE the list, do not merge
+  
   const fetchNotifications = async () => {
     try {
       const res = await axios.get(`/api/notifications/${userId}?limit=${limit}`);
@@ -139,7 +139,7 @@ const NotificationBell: React.FC<Props> = ({ userId }) => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 5000);
 
-    // Nasłuchuj na custom event (opcjonalnie)
+    // Nasłuchuj na custom event 
     const handleUpdate = () => fetchNotifications();
     window.addEventListener("notifications:update", handleUpdate);
 
@@ -201,41 +201,41 @@ const NotificationBell: React.FC<Props> = ({ userId }) => {
             <>
               {notifications.map(note => (
                 <NotificationItem
-                key={note.id}
-                isRead={note.read}
-                onClick={() => markSingleAsRead(note.id)}
-                title={note.project?.name ? `Projekt: ${note.project.name}` : ""}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", minHeight: 44 }}>
-                <img
-  src={note.user?.avatar || "/default-avatar.png"}
-  alt="avatar"
-  style={{
-    width: 40,
-    height: 40,
-    minWidth: 40,
-    minHeight: 40,
-    borderRadius: "50%",
-    objectFit: "cover",
-    border: "2px solid #fff",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-    background: "#eee",
-    display: "block"
-  }}
-/>
-                  <div>
-                    <strong style={{ marginRight: 6 }}>
-                      {note.user?.name ?? "Użytkownik"}:
-                    </strong>
-                    {note.text}
-                    {note.project?.name && (
-                      <span style={{ color: "#888", marginLeft: 6, fontSize: 12 }}>
-                        [{note.project.name}]
-                      </span>
-                    )}
+                  key={note.id}
+                  isRead={note.read}
+                  onClick={() => markSingleAsRead(note.id)}
+                  title={note.project?.name ? `Projekt: ${note.project.name}` : ""}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", minHeight: 44 }}>
+                    <img
+                      src={note.user?.avatar || "/default-avatar.png"}
+                      alt="avatar"
+                      style={{
+                        width: 40,
+                        height: 40,
+                        minWidth: 40,
+                        minHeight: 40,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid #fff",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        background: "#eee",
+                        display: "block"
+                      }}
+                    />
+                    <div>
+                      <strong style={{ marginRight: 6 }}>
+                        {note.user?.name ?? "Użytkownik"}:
+                      </strong>
+                      {note.text}
+                      {note.project?.name && (
+                        <span style={{ color: "#888", marginLeft: 6, fontSize: 12 }}>
+                          [{note.project.name}]
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </NotificationItem>
+                </NotificationItem>
               ))}
 
               {unreadCount > 0 && (

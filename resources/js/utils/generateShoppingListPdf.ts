@@ -106,7 +106,7 @@ export const generateShoppingListPdf = (project: Project, items: ShoppingItem[],
         }
     });
 
-    // Dodajemy datę i godzinę oraz użytkownika
+    // data,h,uzytkownik
     const now = new Date();
     const dateStr = now.toLocaleDateString("pl-PL");
     const timeStr = now.toLocaleTimeString("pl-PL", { hour12: false });

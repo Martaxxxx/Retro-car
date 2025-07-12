@@ -16,7 +16,7 @@ if (csrf) {
   axios.defaults.headers.common['X-CSRF-TOKEN'] = csrf;
 }
 axios.defaults.headers.common['Accept'] = 'application/json';
-// --------------------------------------------
+
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>

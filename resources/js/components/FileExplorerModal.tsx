@@ -1,10 +1,11 @@
 import React from "react";
 import "../styles/FileExplorerModal.css";
+import { Folder as LucideFolder, File as LucideFile } from "lucide-react";
 
-// POZWÓL na dwa typy plików: backend (url) i frontend (file)
+
 export type FileData =
-  | { name: string; size?: number; type?: string; url: string; id?: number } // backend
-  | { name: string; size: number; type: string; file: File };                // frontend
+    | { name: string; size?: number; type?: string; url: string; id?: number } 
+    | { name: string; size: number; type: string; file: File };                
 
 interface Props {
     files: FileData[];
@@ -24,7 +25,7 @@ const FileExplorerModal: React.FC<Props> = ({ files, onClose, onRemove }) => {
         <div className="file-explorer-overlay">
             <div className="file-explorer-card">
                 <div className="file-explorer-header">
-                    📂 Załączniki ({files.length})
+                    <LucideFolder size={20} color="#facc15" style={{ marginRight: 6, verticalAlign: "middle" }} /> Załączniki ({files.length})
                 </div>
                 <ul className="file-explorer-list">
                     {files.map((f, idx) => {
@@ -41,6 +42,7 @@ const FileExplorerModal: React.FC<Props> = ({ files, onClose, onRemove }) => {
                                                 alt="preview"
                                                 className="file-explorer-thumb"
                                             />
+
                                         ) : (
                                             <img
                                                 src={URL.createObjectURL((f as any).file)}
@@ -49,7 +51,9 @@ const FileExplorerModal: React.FC<Props> = ({ files, onClose, onRemove }) => {
                                             />
                                         )
                                     ) : (
-                                        <div style={{ fontSize: "1.8rem" }}>📄</div>
+                                        <div>
+                                            <LucideFile size={30} style={{ color: "#6b7280" }} />
+                                        </div>
                                     )}
                                     <div>
                                         <div className="file-explorer-name">{f.name}</div>

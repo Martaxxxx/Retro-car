@@ -9,6 +9,7 @@ import "../styles/ShoppingList.css";
 import axios from "../axios";
 import WheelSpinner from "../components/WheelSpinner";
 import { Project } from "../types/Project";
+import { FileText as LucideFileText, Plus as LucidePlus } from "lucide-react";
 
 type LocalNewRow = Omit<ShoppingItem, "id">;
 
@@ -350,7 +351,7 @@ const ShoppingList: React.FC = () => {
                         itemsSaved,
                         currentUser ? `${currentUser.name} ${currentUser.surname}` : undefined
                     )}>
-                        📄 Pobierz PDF
+                        <LucideFileText size={20} style={{ marginRight: 6, verticalAlign: "middle" }} /> Pobierz PDF
                     </button>
                 </div>
 
@@ -412,7 +413,7 @@ const ShoppingList: React.FC = () => {
                             ref={addButtonRef}
                             onClick={handleAddEmptyRow}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                            <LucidePlus size={24} style={{ marginRight: 6, verticalAlign: "middle" }} />
                             Dodaj
                         </button>
                         <button className="btn btn-custom" onClick={handleSaveEdit}>Zapisz</button>

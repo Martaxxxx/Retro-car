@@ -135,7 +135,7 @@ const ProjectSlider: React.FC = () => {
     if (user) {
       loadProjects(1, true);
     }
-    // eslint-disable-next-line
+ 
   }, [user]);
 
   const loadProjects = async (pageToLoad: number, reset: boolean = false) => {
@@ -204,10 +204,8 @@ const ProjectSlider: React.FC = () => {
               )}
               <Title>{project.name}</Title>
               <ProgressBar>
-                {/* UŻYWAJ progressPercent z API! */}
                 <Progress $progress={project.progressPercent ?? 0} />
               </ProgressBar>
-              {/* Opcjonalnie, widoczna liczba procent */}
               <div style={{
                 marginTop: 6,
                 fontSize: "13px",

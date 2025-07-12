@@ -57,7 +57,7 @@ class Project extends Model
             switch ($part->status) {
                 case 'ready': return 50;
                 case 'installed': return 100;
-                default: return 0; // pending
+                default: return 0; 
             }
         });
 

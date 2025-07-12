@@ -9,10 +9,10 @@ use App\Models\Project;
 class Notification extends Model
 {
     protected $fillable = [
-        'project_id',    // ID projektu, którego dotyczy powiadomienie
-        'sender_id',     // Kto wykonał akcję (użytkownik generujący powiadomienie)
-        'text',          // Treść powiadomienia
-        'type',          // Typ powiadomienia: 'part', 'shopping', itp.
+        'project_id',    
+        'sender_id',     
+        'text',          
+        'type',          
     ];
 
     // Relacja: kto wykonał akcję (autor powiadomienia)

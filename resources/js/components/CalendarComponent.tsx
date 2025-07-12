@@ -12,7 +12,7 @@ const CalendarComponent: React.FC = () => {
         
             <DatePicker
                 selected={selectedDate}
-                onChange={(date: Date) => setSelectedDate(date)}
+                onChange={(date: Date | null) => setSelectedDate(date)}
                 dateFormat="yyyy-MM-dd"
                 className="custom-datepicker"
                 placeholderText="Wybierz datę"

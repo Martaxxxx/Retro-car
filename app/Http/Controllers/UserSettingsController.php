@@ -14,7 +14,7 @@ class UserSettingsController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'avatar' => 'nullable|file|image|max:8000', // max 2MB
+            'avatar' => 'nullable|file|image|max:8000', 
             'name' => 'nullable|string|max:255',
             'surname' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,

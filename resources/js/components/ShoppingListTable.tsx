@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
-import { FaFilter, FaPaperclip } from "react-icons/fa";
+import { Paperclip as LucidePaperclip, Filter as LucideFilter } from "lucide-react";
 import Select from "react-select";
 import axios from "../axios";
 
@@ -84,7 +84,7 @@ const ShoppingListTable: React.FC<Props> = ({
     const [showNameRequiredAlert, setShowNameRequiredAlert] = useState(false);
     const addButtonRef = useRef<HTMLButtonElement>(null);
 
-    // Scroll to "Dodaj" button when entering editMode
+    // Scroll to "Dodaj" 
     useEffect(() => {
         if (editMode && addButtonRef.current) {
             setTimeout(() => {
@@ -196,7 +196,7 @@ const ShoppingListTable: React.FC<Props> = ({
         (item) => editMode || (item.name && item.name.trim() !== "")
     );
 
-    // Funkcja walidująca przy zapisie (do użycia w ShoppingList!)
+    // Funkcja walidująca przy zapisie
     const validateBeforeSave = () => {
         const hasEmptyName = items.some(item => !item.name || item.name.trim() === "");
         if (hasEmptyName) {
@@ -216,7 +216,6 @@ const ShoppingListTable: React.FC<Props> = ({
 
     return (
         <div>
-            {/* ALERT/POPUP NA GÓRZE */}
             {showNameRequiredAlert && (
                 <div style={{
                     position: "sticky",
@@ -253,7 +252,7 @@ const ShoppingListTable: React.FC<Props> = ({
                 <span style={{ fontWeight: "bold", fontSize: "1.3rem", color: "#333" }}>
                     Filtr
                 </span>
-                <FaFilter
+                <LucideFilter
                     style={{
                         cursor: "pointer",
                         fontSize: "1.2rem",
@@ -421,8 +420,8 @@ const ShoppingListTable: React.FC<Props> = ({
                                             className="form-control form-control-sm"
                                             value={
                                                 item.priceNet === "" ||
-                                                item.priceNet === null ||
-                                                isNaN(Number(item.priceNet))
+                                                    item.priceNet === null ||
+                                                    isNaN(Number(item.priceNet))
                                                     ? ""
                                                     : String(item.priceNet)
                                             }
@@ -447,8 +446,8 @@ const ShoppingListTable: React.FC<Props> = ({
                                             className="form-control form-control-sm"
                                             value={
                                                 item.priceGross === "" ||
-                                                item.priceGross === null ||
-                                                isNaN(Number(item.priceGross))
+                                                    item.priceGross === null ||
+                                                    isNaN(Number(item.priceGross))
                                                     ? ""
                                                     : String(item.priceGross)
                                             }
@@ -538,7 +537,7 @@ const ShoppingListTable: React.FC<Props> = ({
                                                     setActiveItemId(item.id)
                                                 }
                                             >
-                                                <FaPaperclip />
+                                                <LucidePaperclip size={16} />
                                                 <span style={{ fontSize: "0.95em", marginLeft: 2 }}>
                                                     ({item.invoices.length})
                                                 </span>
@@ -604,8 +603,6 @@ const ShoppingListTable: React.FC<Props> = ({
                     </tbody>
                 </table>
             </div>
-
-            {/* Przycisk zapisz powinien być w ShoppingList, tutaj tylko funkcja walidacji! */}
 
             {totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">

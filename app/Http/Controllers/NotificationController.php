@@ -46,7 +46,7 @@ class NotificationController extends Controller
             ]);
         }
 
-        // Zwykli użytkownicy widzą tylko przypisane powiadomienia
+        //  użytkownicy widzą tylko przypisane powiadomienia 
         $notifications = $user->notifications()
             ->with(['sender', 'project'])
             ->orderBy('created_at', 'desc')

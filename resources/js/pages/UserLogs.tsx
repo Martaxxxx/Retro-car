@@ -68,7 +68,6 @@ const UserLogs: React.FC = () => {
     <>
       <Navbar />
       <div className="container mt-5 pt-5">
-        {/* Tekstowy link powrotu na górze */}
         <Link
           to="/adminpanel"
           className="project-breadcrumb"
