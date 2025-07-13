@@ -287,27 +287,28 @@ button.btn-secondary {
     color: #0b0b0b;
 }
 
-.icon-remove-btn svg.bi,
-svg.bi {
-    fill: #9C2F3B !important;
+/* --- POPRAWKA DLA KOSZA LUCIDE (obrys, bez wypełnienia) --- */
+.icon-remove-btn svg {
+    fill: none !important;      /* BEZ wypełnienia */
+    stroke: #9C2F3B !important; /* Bordowy obrys */
+    color: #9C2F3B !important;
+    transition: stroke 0.15s, color 0.15s;
 }
 
-.icon-remove-btn:hover svg.bi,
-.icon-remove-btn:hover svg.bi-trash,
-.icon-remove-btn:hover svg.bi-trash3 {
-    fill: #7b1e2b !important;
+.icon-remove-btn:hover svg {
+    stroke: #7b1e2b !important;
+    color: #7b1e2b !important;
 }
 
+/* Usuń stare style Bootstrap Icons dla .bi, nie są już potrzebne! */
+
+/* Ikony akcji w tabeli */
 .icon-actions {
     display: flex;
     align-items: center;
-    /* wyśrodkuj pionowo w komórce */
     justify-content: center;
-    /* wyśrodkuj poziomo */
     gap: 16px;
-    /* odstęp między ikonami, zmień np. na 12px */
     height: 100%;
-    /* żeby flex działał na całą wysokość komórki */
 }
 
 .icon-actions button {

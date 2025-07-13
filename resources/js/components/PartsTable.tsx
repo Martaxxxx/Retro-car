@@ -50,14 +50,14 @@ interface Props {
 }
 
 const customSelectStyles = {
-  control: (base) => ({
+  control: (base: any) => ({
     ...base,
     backgroundColor: "#fff",
     borderColor: "#9C2F3B",
     boxShadow: "none",
     "&:hover": { borderColor: "#9C2F3B" },
   }),
-  option: (base, state) => ({
+  option: (base: any, state: any) => ({
     ...base,
     backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
     color: state.isFocused ? "#fff" : "#000",
@@ -91,7 +91,7 @@ const PartsTable: React.FC<Props> = ({
   const [selectAll, setSelectAll] = useState(false);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  const addRowButtonRef = useRef<HTMLButtonElement>(null);
+
   const [noteModalContent, setNoteModalContent] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
@@ -105,6 +105,7 @@ const PartsTable: React.FC<Props> = ({
   const itemsPerPage = 25;
   const [currentPage, setCurrentPage] = useState(1);
 
+  const addRowButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (editMode && addRowButtonRef.current) {
       setTimeout(() => {
@@ -277,14 +278,14 @@ const PartsTable: React.FC<Props> = ({
               onClick={handlePrintQRs}
               disabled={selectedIds.length === 0}
             >
-              <LucidePrinter size={20} color="#fff" style={{ marginRight: 6, verticalAlign: "middle",position: "relative",top: "-2px" }} /> QR
+              <LucidePrinter size={20} color="#fff" style={{ marginRight: 6, verticalAlign: "middle", position: "relative", top: "-2px" }} /> QR
             </button>
           </div>
 
           {!editMode && (
             <div className="d-flex mt-md-0 ms-8 mt-2 gap-2">
               <button className="btn btn-custom" onClick={onGeneratePDF}>
-                <LucideFileText size={20} style={{ marginRight: 6, verticalAlign: "middle",position: "relative",top: "-2px" }} /> Pobierz PDF
+                <LucideFileText size={20} style={{ marginRight: 6, verticalAlign: "middle", position: "relative", top: "-2px" }} /> Pobierz PDF
               </button>
               <button
                 className="btn btn-custom"
