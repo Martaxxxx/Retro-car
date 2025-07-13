@@ -15,32 +15,32 @@ class ProjectController extends Controller
     // odpowiada za to kto widzi projekty- wszyscy
 
     public function index()
-{
-    // Eager load parts, bo progressPercent korzysta z parts
-    $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
+    {
+        // Eager load parts, bo progressPercent korzysta z parts
+        $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
 
-    // Każdy projekt zamieniamy na tablicę, żeby dodać progressPercent w odpowiedzi
-    $projectsArray = $projects->map(function ($project) {
-        return [
-            'id' => $project->id,
-            'name' => $project->name,
-            'image' => $project->image,
-            'start_date' => $project->start_date,
-            'end_date' => $project->end_date,
-            'status' => $project->status,
-            'brand' => $project->brand,
-            'model' => $project->model,
-            'year' => $project->year,
-            'car_id' => $project->car_id,
-            'users' => $project->users,
-            'shoppingItems' => $project->shoppingItems,
-            'parts' => $project->parts,
-            'progressPercent' => $project->progress_percent, 
-        ];
-    });
+        // Każdy projekt zamieniamy na tablicę, żeby dodać progressPercent w odpowiedzi
+        $projectsArray = $projects->map(function ($project) {
+            return [
+                'id' => $project->id,
+                'name' => $project->name,
+                'image' => $project->image,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'status' => $project->status,
+                'brand' => $project->brand,
+                'model' => $project->model,
+                'year' => $project->year,
+                'car_id' => $project->car_id,
+                'users' => $project->users,
+                'shoppingItems' => $project->shoppingItems,
+                'parts' => $project->parts,
+                'progressPercent' => $project->progress_percent, 
+            ];
+        });
 
-    return response()->json($projectsArray);
-}
+        return response()->json($projectsArray);
+    }
     
     public function store(Request $request)
     {
@@ -80,7 +80,6 @@ class ProjectController extends Controller
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
 
-            
             if (count($request->user_ids)) {
                 $notification = Notification::create([
                     'project_id' => $project->id,
@@ -89,7 +88,6 @@ class ProjectController extends Controller
                 ]);
                 $notification->users()->attach($request->user_ids, ['read' => false]);
             }
-            
         }
 
         if ($request->hasFile('image')) {
@@ -116,6 +114,13 @@ class ProjectController extends Controller
         $project = Project::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
+            'name'       => 'required|string|max:255',
+            'status'     => 'required|string',
+            'brand'      => 'nullable|string|max:100',
+            'model'      => 'nullable|string|max:100',
+            'year'       => 'nullable|integer|min:1885|max:' . date('Y'),
+            'car_id'     => 'nullable|string|max:100',
+            'description'=> 'nullable|string',
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
             'user_ids'   => 'nullable|array',
@@ -129,15 +134,19 @@ class ProjectController extends Controller
             ], 422);
         }
 
-        $project->update([
-            'start_date' => $request->start_date,
-            'end_date'   => $request->end_date,
-        ]);
+        $project->name        = $request->name;
+        $project->status      = $request->status;
+        $project->brand       = $request->brand;
+        $project->model       = $request->model;
+        $project->year        = $request->year;
+        $project->car_id      = $request->car_id;
+        $project->description = $request->description;
+        $project->start_date  = $request->start_date;
+        $project->end_date    = $request->end_date;
+        $project->save();
 
         if ($request->has('user_ids')) {
             $project->users()->sync($request->user_ids);
-
-            
         }
 
         $project->load('users');
@@ -162,7 +171,6 @@ class ProjectController extends Controller
             File::deleteDirectory($folderPath);
         }
 
-       
         $project->delete();
 
         return response()->json(['message' => 'Projekt został usunięty.']);
