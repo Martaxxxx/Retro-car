@@ -71,6 +71,7 @@ select option:focus {
     border-radius: 12px;
     border-collapse: separate;
     border-spacing: 0;
+    margin-bottom: 32px; /* Dodany odstęp na dole, aby nie ucinało zaokrągleń */
 }
 
 .custom-table thead {
@@ -299,8 +300,6 @@ button.btn-secondary {
     stroke: #7b1e2b !important;
     color: #7b1e2b !important;
 }
-
-/* Usuń stare style Bootstrap Icons dla .bi, nie są już potrzebne! */
 
 /* Ikony akcji w tabeli */
 .icon-actions {
