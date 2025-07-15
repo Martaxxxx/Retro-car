@@ -39,8 +39,8 @@ interface CurrentUser {
 
 const statusOptions = [
   { value: "Utworzony", label: "Utworzony" },
-  { value: "Gotowy do zamontowania", label: "Gotowy do zamontowania" },
-  { value: "Zamontowany", label: "Zamontowany" },
+  { value: "W toku", label: "W toku" },
+  { value: "Gotowy", label: "Gotowy" },
 ];
 
 const customSelectStyles = {
