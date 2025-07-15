@@ -37,20 +37,26 @@ interface CurrentUser {
   roles: string[];
 }
 
+const statusOptions = [
+  { value: "Utworzony", label: "Utworzony" },
+  { value: "Gotowy do zamontowania", label: "Gotowy do zamontowania" },
+  { value: "Zamontowany", label: "Zamontowany" },
+];
+
 const customSelectStyles = {
-  control: (base: any) => ({
+  control: (base: any, state: any) => ({
     ...base,
     backgroundColor: "#fff",
-    borderColor: "#9C2F3B",
+    borderColor: state.isFocused ? "#9C2F3B" : "#9C2F3B",
     boxShadow: "none",
-    "&:hover": { borderColor: "#9C2F3B" }
+    "&:hover": { borderColor: "#9C2F3B" },
   }),
   option: (base: any, state: any) => ({
     ...base,
     backgroundColor: state.isFocused ? "#9C2F3B" : "#fff",
     color: state.isFocused ? "#fff" : "#000",
-    cursor: "pointer"
-  })
+    cursor: "pointer",
+  }),
 };
 
 const ProjectDetails: React.FC = () => {
@@ -163,6 +169,7 @@ const ProjectDetails: React.FC = () => {
     if (projectId && name && currentUser) {
       fetchProjectAndUsers();
     }
+    // eslint-disable-next-line
   }, [projectId, name, currentUser]);
 
   // Listen for project updates (for slider/renowacje sync)
@@ -172,6 +179,7 @@ const ProjectDetails: React.FC = () => {
     };
     window.addEventListener("project:update", handler);
     return () => window.removeEventListener("project:update", handler);
+    // eslint-disable-next-line
   }, [projectId, name, currentUser]);
 
   // Countdown timer for project
@@ -201,7 +209,6 @@ const ProjectDetails: React.FC = () => {
   const saveProjectChanges = async () => {
     if (!project) return;
     try {
-      // Wyślij WSZYSTKIE istotne pola!
       await axios.put(`/projects/${project.id}`, {
         name: project.name,
         status: project.status,
@@ -215,7 +222,6 @@ const ProjectDetails: React.FC = () => {
         description: project.description,
       });
 
-      // Po zapisie pobierz projekt z backendu jeszcze raz!
       await fetchProjectAndUsers();
 
       setEditProjectMode(false);
@@ -467,29 +473,87 @@ const ProjectDetails: React.FC = () => {
             style={{
               flex: "1 1 40%",
               maxWidth: "40%",
-              minWidth: "280px"
+              minWidth: "280px",
             }}
             className="order-md-2 order-3"
           >
             {editProjectMode ? (
               <>
-                {["name", "status", "brand", "model", "year", "carId"].map(
-                  (field) => (
-                    <input
-                      key={field}
-                      type="text"
-                      className="form-control form-control-sm mb-2"
-                      style={{ maxWidth: "500px", height: "40px" }}
-                      value={project[field as keyof Project] as string}
-                      onChange={(e) =>
-                        handleInputChange(
-                          field as keyof Project,
-                          e.target.value
-                        )
-                      }
-                    />
-                  )
-                )}
+                <div className="mb-2" style={{ maxWidth: "500px" }}>
+                  <label className="form-label">Nazwa projektu</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    style={{ maxWidth: "500px", height: "40px" }}
+                    value={project.name}
+                    onChange={(e) =>
+                      handleInputChange("name", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="mb-2" style={{ maxWidth: "500px" }}>
+                  <label className="form-label">Status</label>
+                  <Select
+                    styles={customSelectStyles}
+                    options={statusOptions}
+                    value={statusOptions.find(
+                      (opt) => opt.value === project.status
+                    )}
+                    onChange={(option) =>
+                      handleInputChange("status", option?.value || "")
+                    }
+                    placeholder="Wybierz status..."
+                    isSearchable={false}
+                  />
+                </div>
+                <div className="mb-2" style={{ maxWidth: "500px" }}>
+                  <label className="form-label">Marka</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    style={{ maxWidth: "500px", height: "40px" }}
+                    value={project.brand}
+                    onChange={(e) =>
+                      handleInputChange("brand", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="mb-2" style={{ maxWidth: "500px" }}>
+                  <label className="form-label">Model</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    style={{ maxWidth: "500px", height: "40px" }}
+                    value={project.model}
+                    onChange={(e) =>
+                      handleInputChange("model", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="mb-2" style={{ maxWidth: "500px" }}>
+                  <label className="form-label">Rocznik</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    style={{ maxWidth: "500px", height: "40px" }}
+                    value={project.year}
+                    onChange={(e) =>
+                      handleInputChange("year", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="mb-2" style={{ maxWidth: "500px" }}>
+                  <label className="form-label">Zlecenie</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    style={{ maxWidth: "500px", height: "40px" }}
+                    value={project.carId}
+                    onChange={(e) =>
+                      handleInputChange("carId", e.target.value)
+                    }
+                  />
+                </div>
                 <div className="mb-3" style={{ maxWidth: "500px" }}>
                   <label className="form-label">Użytkownicy:</label>
                   <Select

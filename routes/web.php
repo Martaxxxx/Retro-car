@@ -106,9 +106,12 @@ Route::prefix('api')->group(function () {
     Route::middleware('ispurchaser')->get('/purchaser-notifications/{userId}', [ShoppingListController::class, 'purchaserNotifications']);
 });
 
-// Szczegóły projektu
+// SZCZEGÓŁY PROJEKTU – preferowany format: /projectdetails/{id}/{brand}/{model}
+// Dla adresów typu /projectdetails/32/Mercedes/W124
+Route::get('/projectdetails/{id}/{brand}/{model}', [ProjectController::class, 'showByIdBrandModel']);
+
+// Legacy/tradycyjny: /api/projectdetails/{id}/{name} (opcjonalnie, można usunąć jeśli niepotrzebne)
 Route::get('/api/projectdetails/{id}/{name}', [ProjectController::class, 'showByIdAndName']);
-Route::get('/projectdetails/{name}', [ProjectController::class, 'showByName']);
 
 // Trasa diagnostyczna
 Route::get('/check-db-path', fn() => DB::connection()->getDatabaseName());

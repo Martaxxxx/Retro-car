@@ -12,14 +12,10 @@ use Illuminate\Support\Facades\File;
 
 class ProjectController extends Controller
 {
-    // odpowiada za to kto widzi projekty- wszyscy
-
     public function index()
     {
-        // Eager load parts, bo progressPercent korzysta z parts
         $projects = Project::with(['users:id,name,surname', 'shoppingItems', 'parts'])->get();
 
-        // Każdy projekt zamieniamy na tablicę, żeby dodać progressPercent w odpowiedzi
         $projectsArray = $projects->map(function ($project) {
             return [
                 'id' => $project->id,
@@ -165,7 +161,6 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
         }
 
-        //  Usuń folder uploads/projects/project_{id}
         $folderPath = storage_path("app/public/uploads/projects/project_{$id}");
         if (File::exists($folderPath)) {
             File::deleteDirectory($folderPath);
@@ -199,15 +194,31 @@ class ProjectController extends Controller
         return response()->json($projects);
     }
 
-    public function showByIdAndName($id, $name)
+    // Obsługa /projectdetails/{id}/{brand}/{model}
+    public function showByIdBrandModel($id, $brand, $model)
     {
-        $decodedName = urldecode($name);
+        $project = Project::find($id);
 
-        Log::info("Szukanie projektu ID [$id] z nazwą [$decodedName]");
+        if (!$project) {
+            return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
+        }
 
-        $project = Project::where('id', $id)
-            ->whereRaw('LOWER(name) = ?', [strtolower($decodedName)])
-            ->first();
+        // brand i model w URL są tylko dla czytelności/SEO
+        // Możesz opcjonalnie przekierować na poprawny adres jeśli chcesz
+        // use Illuminate\Support\Str; jeśli chcesz użyć slugów
+
+        $project->load('users');
+        $project->parts       = $project->parts()->get();
+        $project->files       = $project->files()->get();
+        $project->description = 'Tutaj będzie opis projektu';
+
+        return response()->json($project);
+    }
+
+    // Obsługa starszego formatu /projectdetails/{id}/{name1}/{name2?}
+    public function showByIdAndName($id, $name1, $name2 = null)
+    {
+        $project = Project::find($id);
 
         if (!$project) {
             return response()->json(['message' => 'Projekt nie znaleziony.'], 404);
