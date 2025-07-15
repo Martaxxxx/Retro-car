@@ -19,7 +19,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $user = Auth::user();
 
-            Log::info('➡️ Próba zapisu logowania dla user_id: ' . $user->id);
+            Log::info('Próba zapisu logowania dla user_id: ' . $user->id);
 
             try {
                 $log = LoginLog::create([
