@@ -19,6 +19,7 @@ use App\Http\Controllers\ProjectFileController;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsManager;
 use App\Http\Middleware\IsPurchaser;
+use Illuminate\Support\Facades\Auth;
 
 // SPA główna strona
 Route::get('/', fn() => view('app'));
@@ -121,3 +122,12 @@ Route::get('/projects/search', [ProjectController::class, 'search']);
 
 // SPA fallback – wszystko inne do Reacta
 Route::get('/{any}', fn() => view('app'))->where('any', '.*');
+
+
+Route::post('/api/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return response()->json(['message' => 'Wylogowano']);
+});

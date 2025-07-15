@@ -55,10 +55,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+const logout = async () => {
+  try {
+    await axios.post("/api/logout");
+  } catch (e) {
+    console.warn("Błąd przy wylogowywaniu", e);
+  } finally {
     setUser(null);
     window.location.href = "/logowanie";
-  };
+  }
+};
+
 
   useEffect(() => {
     fetchUser();
